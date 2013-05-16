@@ -4,12 +4,13 @@ Created on Sat Mar 30 20:36:09 2013
 
 @author: clisle
 
-This API manages the creation, naming, and upload of datasets into the Arbor database
-system.  This is built as a client application to Kitware's Tangelo web framework.  This API 
-allows the user to create new projects, create datatypes for files to be associated 
-with the projects, and upload files to the projects.  Initially, this is developed as:
-an API layer called by an application program, but the thinking is that this might
-grow up to become a Tangelo service, someday.
+This API manages the creation, naming, and upload of datasets into the Arbor
+database system.  This is built as a client application to Kitware's Tangelo web
+framework.  This API allows the user to create new projects, create datatypes
+for files to be associated with the projects, and upload files to the projects.
+Initially, this is developed as: an API layer called by an application program,
+but the thinking is that this might grow up to become a Tangelo service,
+someday.
 
 Requirements:
     - mongoDB instance used to store metadata
@@ -33,18 +34,8 @@ from Bio import Phylo
 # parser routine for fasta files & sequences
 from Bio import SeqIO
 
-from PyQt4.QtCore import *
-
-class ArborFileManager(QObject):
-    # had to move signal to class variable because instance variable didn't work, see:
-    # http://stackoverflow.com/questions/2970312/pyqt4-qtcore-pyqtsignal-object-has-no-attribute-connect
-
-    # emitted when a project is added or deleted
-    projectListChangedSignal = pyqtSignal();
-    datasetListChangedSignal = pyqtSignal();
-    
-    def __init__(self, parent=None):
-        super(ArborFileManager, self).__init__(parent)
+class ArborFileManager:
+    def __init__(self):
         self.projectList = []
         self.datatypeList = []
         self.datasetList = []
@@ -53,40 +44,38 @@ class ArborFileManager(QObject):
         self.defaultMongoPort = 27017
         self.defaultMongoDatabase = 'xdata'
         # all collections created have a prefix to destinguish arbor collections
-        # from other collections in the database.  The default can be changed through
-        # exercsting the API call to set an alternative string. 
+        # from other collections in the database.  The default can be changed
+        # through exercsting the API call to set an alternative string.
         self.prefixString = 'ar_'
-        
-        # define signals to be emitted as needed
 
     # change the default prefix string
     def setPrefixString(self,newstr):
        self.prefixString = newstr;
-       
-    # allow for the default parameters for the mongo instance to be changed    
+
+    # allow for the default parameters for the mongo instance to be changed
     def setMongoHost(self,hostname):
         self.defaultMongoHost = hostname;
     def setMongoDatabase(self,database):
         self.defaultMongoDatabase = database
     def setMongoPort(self,portnumber):
-        self.defaultMongoPort = portnumber        
-    
-    def initDatabaseConnection(self):     
+        self.defaultMongoPort = portnumber
+
+    def initDatabaseConnection(self):
         self.connection = Connection(self.defaultMongoHost, self.defaultMongoPort)
         self.db = self.connection[self.defaultMongoDatabase]
 
     def insertIntoMongo(self,item, collection):
         return collection.insert(item)
-        
-        
-    # create the record in Mongo for a new project    
+
+    # create the record in Mongo for a new project
     def newProject(self,projectName):
         collectionName = self.prefixString+'projects'
         print "collection to use is:",collectionName
         projectCollection = self.db[collectionName]
 
-        # we could increase flexability later by creating a UI to add/remove types, but 
-        #initially just create standard datatypes for this project already included in the record
+        # we could increase flexability later by creating a UI to add/remove
+        # types, but initially just create standard datatypes for this project
+        # already included in the record
         projectRecord = {"type" : "ArborProject",
                          "name" : projectName ,
                          #"datatypes" : ["PhyloTree","CharacterMatrix","Observations"],
@@ -94,12 +83,11 @@ class ArborFileManager(QObject):
                          #"PhyloTree" : [],
                          #"CharacterMatrix" : [],
                          #"Observations" : []
-                         }           
+                         }
         self.insertIntoMongo(projectRecord,projectCollection)
-        # tell watchers that the project list changed
-        self.projectListChangedSignal.emit();
-    
-    # look in the database and return a list of the projects currently in the database    
+
+    # look in the database and return a list of the projects currently in the
+    # database
     def getListOfProjectNames(self):
         # return a list of only the project names by using the $project operator in mongo.
         # pick the 'result' field from the query
@@ -118,8 +106,9 @@ class ArborFileManager(QObject):
         self.currentProjectName = prname
     def getCurrentProject(self):
         return self.currentProjectName
-        
-   # look in the database and return a list of the datatypes allowed by a particular project    
+
+   # look in the database and return a list of the datatypes allowed by a
+   # particular project
     def getListOfTypesForProject(self, projname):
         # return a list of only the project names by using the $project operator in mongo.
         # pick the 'result' field from the query
@@ -134,45 +123,45 @@ class ArborFileManager(QObject):
                 #print "found type: ",projecttypes[i]
         return newlist
 
-    # find and remove a project indexed through its project name        
+    # find and remove a project indexed through its project name
     def deleteProjectNamed(self,projectName):
         print "removing project named: ",projectName
         project = self.db.ar_projects.find_one({"name" : projectName})
-        
-        # first drop the dataset collections.  Do this by looking through
-        # all the datatypes this project has and deleting all instances of 
-        # any type
+
+        # first drop the dataset collections.  Do this by looking through all
+        # the datatypes this project has and deleting all instances of any type
         typelist = self.getListOfTypesForProject(projectName)
         for datatype in typelist:
             if datatype in project:
                 datasetlist = project[datatype]
                 #print "found datasets: ",datasetlist
                 for i in range(0,len(datasetlist)):
-                    # each dataset name is the key in a dictionary.  We can assume there is 
-                    # only one key in the dictionary since each dataset has its own dict
+                    # each dataset name is the key in a dictionary.  We can
+                    # assume there is only one key in the dictionary since each
+                    # dataset has its own dict
                     collectionName = self.prefixString+projectName+"_"+datatype+"_"+datasetlist[i].keys()[0]
-                    print "deleting dataset: ",collectionName 
+                    print "deleting dataset: ",collectionName
                     self.db.drop_collection(collectionName)
         # now remove the project record from the projects collection
         result = self.db.ar_projects.remove({ 'name' : projectName})
         return result
-    
-     # find and remove a dataset instance       
+
+     # find and remove a dataset instance
     def deleteDataset(self,projectName,datatypeName, datasetName):
         print "removing dataset from project named: ",projectName
         project = self.db.ar_projects.find_one({"name" : projectName})
-        
-        # first drop the dataset collections.  Do this by looking through
-        # all the datatypes this project has and deleting all instances of 
-        # any type
+
+        # first drop the dataset collections.  Do this by looking through all
+        # the datatypes this project has and deleting all instances of any type
         typelist = self.getListOfTypesForProject(projectName)
         if datatypeName in typelist:
             datasetlist = project[datatypeName]
             #print "found datasets: ",datasetlist
             for i in range(0,len(datasetlist)):
-                if datasetlist[i].keys()[0] == datasetName:  
-                    # each dataset name is the key in a dictionary.  We can assume there is 
-                    # only one key in the dictionary since each dataset has its own dict
+                if datasetlist[i].keys()[0] == datasetName:
+                    # each dataset name is the key in a dictionary.  We can
+                    # assume there is only one key in the dictionary since each
+                    # dataset has its own dict
                     collectionName = self.prefixString+projectName+"_"+datatypeName+"_"+datasetlist[i].keys()[0]
                     print "deleting dataset named: ",datasetName, " in collection:",collectionName
                     # remove the corrresponding entry from the list to delete the reference to the dataset
@@ -189,7 +178,6 @@ class ArborFileManager(QObject):
                         typelist.pop(i)
                         self.db.ar_projects.save(project)
 
-    
     def getListOfDatasetsByProjectAndType(self,projectName,typeName) :
         # return a list of only the project names by using the $project operator in mongo.
         # pick the 'result' field from the query
@@ -205,9 +193,9 @@ class ArborFileManager(QObject):
                 for j in range(0,len(listOfInstances)):
                     newlist.append(listOfInstances[j].keys()[0])
         return newlist
-    
-    # ------------------- tree traversal and update using phyloimport algorithm     
-    
+
+    # ------------------- tree traversal and update using phyloimport algorithm
+
     # add a tree to the project
     def newTreeInProject(self,treename,treefile,projectTitle):
         collectionName = self.prefixString+projectTitle+"_"+"PhyloTree"+"_"+treename
@@ -223,20 +211,16 @@ class ArborFileManager(QObject):
         self.db.ar_projects.update({"name": projectTitle}, { '$push': {u'PhyloTree': {treename:treefile}}})
         self.db.ar_projects.update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'PhyloTree'}})
 
-        # emit a signal so the GUI knows to update
-        self.datasetListChangedSignal.emit();               
-       
     # add a character matrix to the project
     def newCharacterMatrixInProject(self,instancename,filename,projectTitle):
         collectionName = self.prefixString+projectTitle+"_"+"CharacterMatrix"+"_"+instancename
         newCollection = self.db[collectionName]
         print "uploading characters to collection: ",collectionName
         # create the new collection in mongo for this tree
-        
+
         # not all CSV files are the same, so interpret with U=universal
         # newlines
         with open(filename, 'rbU') as csvfile:
-        
             #dialect = csv.Sniffer().sniff(csvfile.read(1024))
             #csvfile.seek(0)
             #reader = csv.reader(csvfile, dialect)
@@ -255,20 +239,19 @@ class ArborFileManager(QObject):
                         characterEntry[header[colnum]] = columntitle
                         # now insert the dictonary as a single entry in the collection
                     newCollection.insert(characterEntry)
-                        
+
         # add a  matrix record entry to the 'CharacterMatrix' array in the project record
         self.db.ar_projects.update({"name": projectTitle}, { '$push': {u'CharacterMatrix': {instancename:filename}}})
         # make sure the character type exists in this project
         self.db.ar_projects.update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'CharacterMatrix'}})
-        self.datasetListChangedSignal.emit();           
-        
+
     # add a character matrix to the project
     def newOccurrencesInProject(self,instancename,filename,projectTitle):
         collectionName = self.prefixString+projectTitle+"_"+"Occurrences"+"_"+instancename
         newCollection = self.db[collectionName]
         print "uploading occurreces to collection: ",collectionName
         # create the new collection in mongo for this tree
-        
+
         # not all CSV files are the same, so interpret with U=universal
         # newlines
         with open(filename, 'rbU') as csvfile:
@@ -287,50 +270,46 @@ class ArborFileManager(QObject):
                         nextEntry[header[colnum]] = columntitle
                         # now insert the dictonary as a single entry in the collection
                     newCollection.insert(nextEntry)
-                        
+
         # add a  matrix record entry to the 'CharacterMatrix' array in the project record
         self.db.ar_projects.update({"name": projectTitle}, { '$push': {u'Occurrences': {instancename:filename}}})
         # Add the occurrence data type in the project if the record isn't already there
         self.db.ar_projects.update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'Occurrences'}})
-        self.datasetListChangedSignal.emit();           
-                
+
     # add sequences to the project
     def newSequencesInProject(self,instancename,filename,projectTitle):
         collectionName = self.prefixString+projectTitle+"_"+"Sequences"+"_"+instancename
         # create the new collection in mongo for sequence data
         newCollection = self.db[collectionName]
         print "uploading sequences to collection: ",collectionName
-    
+
         for seq_record in SeqIO.parse(filename,"fasta"):
             print seq_record
             seqDict = dict()
             seqDict['id'] = seq_record.id
             seqDict['seq'] = repr(seq_record.seq)
             newCollection.insert(seqDict)
-                        
+
         # add a record entry to the 'Sequences' array in the project record
         self.db.ar_projects.update({"name": projectTitle}, { '$push': {u'Sequences': {instancename:filename}}})
         # make sure the sequence type exists in this project
         self.db.ar_projects.update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'Sequences'}})
-        self.datasetListChangedSignal.emit();           
-                            
+
    # add sequences to the project
     def newWorkflowInProject(self,instancename,filename,projectTitle):
         collectionName = self.prefixString+projectTitle+"_"+"Workflows"+"_"+instancename
         # create the new collection in mongo for sequence data
         newCollection = self.db[collectionName]
         print "uploading workflow to collection: ",collectionName
-    
+
         for seq_record in SeqIO.parse(filename,"fasta"):
             print seq_record
             seqDict = dict()
             seqDict['id'] = seq_record.id
             seqDict['seq'] = repr(seq_record.seq)
             newCollection.insert(seqDict)
-                        
+
         # add a record entry to the 'Workflows' array in the project record
         self.db.ar_projects.update({"name": projectTitle}, { '$push': {u'Workflows': {instancename:filename}}})
         # make sure the workflow type exists in this project
         self.db.ar_projects.update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'Workflows'}})
-        self.datasetListChangedSignal.emit();           
-                             
