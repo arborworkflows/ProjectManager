@@ -8,26 +8,45 @@
 
 <script src=arborfilemanager.js></script>
 
+<style>
+    .project > a {
+        text-decoration: none;
+        margin-left: 10px;
+    }
+
+    .selected {
+        background: #773322;
+        border-radius: 15px;
+    }
+
+    .selected > a {
+        color: white;
+    }
+
+    .selected:hover > a {
+        color: white;
+        text-decoration: none;
+    }
+</style>
+
 <title>Web Prototype for Arbor Project Manager</title>
 
 <h1>Arbor Project Manager</h1>
 
-<div class=container>
-    <div class=row>
-        <div class=span4>
-            <strong>Project</strong>
-            <div id=projects>
-            </div>
+<div class=row>
+    <div class=span4>
+        <strong>Project</strong>
+        <div id=projects>
         </div>
-        <div class=span4>
-            <strong>Data Types</strong>
-            <div id=datatypes>
-            </div>
+    </div>
+    <div class=span4>
+        <strong>Data Types</strong>
+        <div id=datatypes>
         </div>
-        <div class=span4>
-            <strong>Data Sets</strong>
-            <div id=datasets>
-            </div>
+    </div>
+    <div class=span4>
+        <strong>Data Sets</strong>
+        <div id=datasets>
         </div>
     </div>
 </div>

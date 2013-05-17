@@ -5,7 +5,7 @@ api = ArborFileManager()
 api.initDatabaseConnection()
 
 @tangelo.restful
-def get(*pargs):
+def get(*pargs, **query_args):
     if len(pargs) == 0:
         return tangelo.HTTPStatusCode(400, "Missing resource type")
 
@@ -13,7 +13,13 @@ def get(*pargs):
     allowed = ["project"]
     if resource_type == "project":
         if len(pargs) > 1:
-            return tangelo.HTTPStatusCode(500, "Unimplemented - sorry!")
+            project = pargs[1]
+            q = query_args.get("q")
+            allowed_q = ["types"]
+            if q == "types":
+                return api.getListOfTypesForProject(project)
+            else:
+                return tangelo.HTTPStatusCode(400, "Missing or bad q parameter.  Allowed options are: %s" % (", ".join(allowed_q)))
         else:
             return api.getListOfProjectNames()
     else:
