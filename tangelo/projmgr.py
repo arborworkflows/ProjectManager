@@ -12,16 +12,17 @@ def get(*pargs, **query_args):
     resource_type = pargs[0]
     allowed = ["project"]
     if resource_type == "project":
-        if len(pargs) > 1:
-            project = pargs[1]
-            q = query_args.get("q")
-            allowed_q = ["types"]
-            if q == "types":
-                return api.getListOfTypesForProject(project)
-            else:
-                return tangelo.HTTPStatusCode(400, "Missing or bad q parameter.  Allowed options are: %s" % (", ".join(allowed_q)))
-        else:
+        if len(pargs) == 1:
             return api.getListOfProjectNames()
+        elif len(pargs) == 2:
+            project = pargs[1]
+            return api.getListOfTypesForProject(project)
+        elif len(pargs) == 3:
+            project = pargs[1]
+            datatype = pargs[2]
+            return api.getListOfDatasetsByProjectAndType(project, datatype)
+        else:
+            return tangelo.HTTPStatusCode(400, "Bad request - got %d parameter(s), was expecting between 1 and 3")
     else:
         return tangelo.HTTPStatusCode(400, "Bad resource type '%s' - allowed types are: %s" % (resource_type, ", ".join(allowed)))
 
