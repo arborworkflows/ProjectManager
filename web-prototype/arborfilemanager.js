@@ -26,11 +26,6 @@ window.onload = function () {
             .enter()
             .append("div")
             .classed("item", true)
-            .append("a")
-            .attr("href", "#")
-            .text(function (d) {
-                return d;
-            })
             .on("click", function (d) {
                 var ajax;
 
@@ -44,7 +39,7 @@ window.onload = function () {
                 // any selected flag on the types, then initiate a click event
                 // on the selected type, then "cascade" this same process onto
                 // the datasets.
-                if (hl_proj && hl_proj.node() === this.parentNode) {
+                if (hl_proj && hl_proj.node() === this) {
                     return;
                 }
 
@@ -52,7 +47,7 @@ window.onload = function () {
                 if (hl_proj) {
                     hl_proj.classed("selected", false);
                 }
-                hl_proj = d3.select(this.parentNode);
+                hl_proj = d3.select(this);
                 hl_proj.classed("selected", true);
 
                 ajax = d3.json("../tangelo/projmgr/project/" + d);
@@ -77,17 +72,12 @@ window.onload = function () {
                         .enter()
                         .append("div")
                         .classed("item", true)
-                        .append("a")
-                        .attr("href", "#")
-                        .text(function (d) {
-                            return d;
-                        })
                         .on("click", function (d) {
                             var ajax;
 
                             // If the click was on the highlighted item, bail
                             // (but, see TODO above).
-                            if (hl_type && hl_type.node() === this.parentNode) {
+                            if (hl_type && hl_type.node() === this.node) {
                                 return;
                             }
 
@@ -95,7 +85,7 @@ window.onload = function () {
                             if (hl_type) {
                                 hl_type.classed("selected", false);
                             }
-                            hl_type = d3.select(this.parentNode);
+                            hl_type = d3.select(this.node);
                             hl_type.classed("selected", true);
 
                             ajax = d3.json("../tangelo/projmgr/project/" + hl_proj.select("a").text() + "/" + d);
@@ -115,16 +105,11 @@ window.onload = function () {
                                     .enter()
                                     .append("div")
                                     .classed("item", true)
-                                    .append("a")
-                                    .attr("href", "#")
-                                    .text(function (d) {
-                                        return d;
-                                    })
                                     .on("click", function (d) {
                                         // If the click was on the highlighted
                                         // item, bail (the TODO above doesn't
                                         // apply in this case).
-                                        if (hl_dataset && hl_dataset.node() === this.parentNode) {
+                                        if (hl_dataset && hl_dataset.node() === this.node) {
                                             return;
                                         }
 
@@ -132,13 +117,28 @@ window.onload = function () {
                                         if (hl_dataset) {
                                             hl_dataset.classed("selected", false);
                                         }
-                                        hl_dataset = d3.select(this.parentNode);
+                                        hl_dataset = d3.select(this.node);
                                         hl_dataset.classed("selected", false);
+                                    })
+                                    .append("a")
+                                    .attr("href", "#")
+                                    .text(function (d) {
+                                        return d;
                                     });
                             });
+                        })
+                        .append("a")
+                        .attr("href", "#")
+                        .text(function (d) {
+                            return d;
                         });
                 });
 
+            })
+            .append("a")
+            .attr("href", "#")
+            .text(function (d) {
+                return d;
             });
     });
 };
