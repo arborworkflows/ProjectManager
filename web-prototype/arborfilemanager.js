@@ -77,7 +77,7 @@ window.onload = function () {
 
                             // If the click was on the highlighted item, bail
                             // (but, see TODO above).
-                            if (hl_type && hl_type.node() === this.node) {
+                            if (hl_type && hl_type.node() === this) {
                                 return;
                             }
 
@@ -85,10 +85,10 @@ window.onload = function () {
                             if (hl_type) {
                                 hl_type.classed("selected", false);
                             }
-                            hl_type = d3.select(this.node);
+                            hl_type = d3.select(this);
                             hl_type.classed("selected", true);
 
-                            ajax = d3.json("../tangelo/projmgr/project/" + hl_proj.select("a").text() + "/" + d);
+                            ajax = d3.json("../tangelo/projmgr/project/" + hl_proj.text() + "/" + d);
                             ajax.send("GET", function (err, datasets) {
                                 if (err) {
                                     error_message("Could not connect to database");
@@ -109,7 +109,7 @@ window.onload = function () {
                                         // If the click was on the highlighted
                                         // item, bail (the TODO above doesn't
                                         // apply in this case).
-                                        if (hl_dataset && hl_dataset.node() === this.node) {
+                                        if (hl_dataset && hl_dataset.node() === this) {
                                             return;
                                         }
 
@@ -117,26 +117,20 @@ window.onload = function () {
                                         if (hl_dataset) {
                                             hl_dataset.classed("selected", false);
                                         }
-                                        hl_dataset = d3.select(this.node);
+                                        hl_dataset = d3.select(this);
                                         hl_dataset.classed("selected", false);
                                     })
-                                    .append("a")
-                                    .attr("href", "#")
                                     .text(function (d) {
                                         return d;
                                     });
                             });
                         })
-                        .append("a")
-                        .attr("href", "#")
                         .text(function (d) {
                             return d;
                         });
                 });
 
             })
-            .append("a")
-            .attr("href", "#")
             .text(function (d) {
                 return d;
             });
