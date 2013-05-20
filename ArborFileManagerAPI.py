@@ -23,6 +23,10 @@ from pymongo import Connection
 import json
 import csv
 
+# used for OpenTreeOfLife access
+import urllib
+import urllib2
+
 
 # import the recursive algorithm to process phyloXML records and create a mongo collection
 import phyloimport_algorithm
@@ -209,12 +213,13 @@ class ArborFileManager(QObject):
     # ------------------- tree traversal and update using phyloimport algorithm     
     
     # add a tree to the project
-    def newTreeInProject(self,treename,treefile,projectTitle):
+    def newTreeInProject(self,treename,treefile,projectTitle, treetype):
         collectionName = self.prefixString+projectTitle+"_"+"PhyloTree"+"_"+treename
         treeCollection = self.db[collectionName]
         print "uploading tree to collection: ",collectionName
+        print "treetype is: ",treetype
         # create the new collection in mongo for this tree
-        trees = Phylo.parse(treefile, "phyloxml")
+        trees = Phylo.parse(treefile, treetype)
         #print "length of trees list: ",len(trees)
         for tree in trees:
             #process tree
@@ -225,7 +230,42 @@ class ArborFileManager(QObject):
 
         # emit a signal so the GUI knows to update
         self.datasetListChangedSignal.emit();               
-       
+  
+   # add a tree to the project
+    def newTreeInProjectFromString(self,treename,treestring,projectTitle, description,treetype):
+        collectionName = self.prefixString+projectTitle+"_"+"PhyloTree"+"_"+treename
+        treeCollection = self.db[collectionName]
+        print "uploading tree to collection: ",collectionName
+        print "treetype is: ",treetype
+        # create the new collection in mongo for this tree.  The tree is encoded 
+        # in a string, so it needs to be processed slightly different than from a file
+        from StringIO import StringIO
+        handle = StringIO(treestring)
+        trees = Phylo.parse(handle, treetype)
+        #print "length of trees list: ",len(trees)
+        for tree in trees:
+            #process tree
+            phyloimport_algorithm.recursive_clade(tree, treeCollection)
+        # add a tree record entry to the 'PyloTree' array in the project record
+        self.db.ar_projects.update({"name": projectTitle}, { '$push': {u'PhyloTree': {treename:str(description)}}})
+        self.db.ar_projects.update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'PhyloTree'}})
+        # emit a signal so the GUI knows to update
+        self.datasetListChangedSignal.emit();               
+    
+    # query from the OpenTreeOfLife.  This routine performs the fetch from OTL,
+    # retrieves a newick tree and processes it to load into the Arbor database
+    def newTreeFromOpenTreeOfLife(self,treename,ottolid,projectTitle):
+        url = 'http://opentree-dev.bio.ku.edu:7474/db/data/ext/GoLS/graphdb/getDraftTreeForOttolID'
+        values = {"ottolID" : ottolid}
+        data = urllib.urlencode(values)
+        req = urllib2.Request(url, data)
+        response = urllib2.urlopen(req)
+        print "received OTL response.  Ingesting tree..."
+        #system.fflush()
+        tree_page = response.read()
+        otltreeAsJson = json.loads(tree_page)
+        self.newTreeInProjectFromString(treename,otltreeAsJson["tree"],projectTitle,ottolid,"newick")
+     
     # add a character matrix to the project
     def newCharacterMatrixInProject(self,instancename,filename,projectTitle):
         collectionName = self.prefixString+projectTitle+"_"+"CharacterMatrix"+"_"+instancename
@@ -316,17 +356,10 @@ class ArborFileManager(QObject):
                             
    # add sequences to the project
     def newWorkflowInProject(self,instancename,filename,projectTitle):
-        collectionName = self.prefixString+projectTitle+"_"+"Workflows"+"_"+instancename
+        collectionName = self.prefixString+projectTitle+"_"+"Workflows"
         # create the new collection in mongo for sequence data
         newCollection = self.db[collectionName]
         print "uploading workflow to collection: ",collectionName
-    
-        for seq_record in SeqIO.parse(filename,"fasta"):
-            print seq_record
-            seqDict = dict()
-            seqDict['id'] = seq_record.id
-            seqDict['seq'] = repr(seq_record.seq)
-            newCollection.insert(seqDict)
                         
         # add a record entry to the 'Workflows' array in the project record
         self.db.ar_projects.update({"name": projectTitle}, { '$push': {u'Workflows': {instancename:filename}}})

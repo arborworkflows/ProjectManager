@@ -57,6 +57,8 @@ def initializeAllDialogs(arborAPI):
     newSequenceDialogInstance = NewSequenceDialog(arborAPI)
     global newWorkflowDialogInstance
     newWorkflowDialogInstance = NewWorkflowDialog(arborAPI)
+    global newOpenTreeOfLifeDialogInstance
+    newOpenTreeOfLifeDialogInstance = NewOpenTreeOfLifeDialog(arborAPI)
 
     
 def openNewProjectDialog():
@@ -76,6 +78,7 @@ class NewTreeDialog(QDialog):
     def __init__(self, ArborAPI,parent=None):
         super(NewTreeDialog, self).__init__(parent)
         self.api = ArborAPI
+        self.treeType = "newick"
         self.titleText = QLabel("Add a new Tree to the current project")
         self.titleText2 = QLabel("Enter the name to give the dataset here:")
         self.confirmationText = QLabel("")
@@ -83,6 +86,10 @@ class NewTreeDialog(QDialog):
         self.selectFileName = QPushButton("Select PhyloXML file to import")
         self.fileSelector = QFileDialog()
         self.fileSelector.setNameFilter("PhyloXML files (*.xml)")
+        self.selectFileNameNewick = QPushButton("Select Newick file to import")
+        self.fileSelectorNewick = QFileDialog()
+        self.fileSelectorNewick.setNameFilter("Newick files (*.phy)")
+
         #self.fileSelector.setFileMode(QtGui.QFileDialog.ExistingFile)
         self.cancelButton = QPushButton("Cancel")
         self.acceptButton = QPushButton("Accept")
@@ -90,6 +97,7 @@ class NewTreeDialog(QDialog):
         self.layout.addWidget(self.titleText)
         self.layout.addWidget(self.titleText2)
         self.layout.addWidget(self.nameDialog)
+        self.layout.addWidget(self.selectFileNameNewick)
         self.layout.addWidget(self.selectFileName)
         self.layout.addWidget(self.confirmationText)
         self.layout.addWidget(self.acceptButton)
@@ -97,13 +105,22 @@ class NewTreeDialog(QDialog):
         self.setLayout(self.layout)
         self.cancelButton.clicked.connect(self.closeTreeDialog)
         self.selectFileName.clicked.connect(self.openFileDialog)
+        self.selectFileNameNewick.clicked.connect(self.openFileDialogNewick)
         self.acceptButton.clicked.connect(self.createNewTree)
         self.fileSelector.fileSelected.connect(self.displayNewTreeStatus)
+        self.fileSelectorNewick.fileSelected.connect(self.displayNewTreeStatus) 
         
     def closeTreeDialog(self):
         self.hide()
+        
     def openFileDialog(self):
         self.fileSelector.show()
+        self.treeType = "phyloxml"
+        
+    def openFileDialogNewick(self):
+        self.fileSelectorNewick.show()        
+        self.treeType = "newick"
+        
     def displayNewTreeStatus(self,treefile):
         self.savedTreeFilename = str(treefile)
         confirmString = str("OK to import file '"+treefile+ "' as '"+str(self.nameDialog.text())+"' ?")
@@ -123,7 +140,7 @@ class NewTreeDialog(QDialog):
             print "adding a tree entitled: ",self.savedTreeFilename
             self.hide()
 #            # create project record in the database
-            self.api.newTreeInProject(nameForTree, self.savedTreeFilename, self.api.getCurrentProject())
+            self.api.newTreeInProject(nameForTree, self.savedTreeFilename, self.api.getCurrentProject(),self.treeType)
 #            
 def openNewTreeDialog():
     global app
@@ -370,7 +387,7 @@ class NewWorkflowDialog(QDialog):
             print "adding sequence entitled: ",self.savedFilename
             self.hide()
 #            # create project record in the database
-            self.api.newSequencesInProject(nameForInstance, self.savedFilename, self.api.getCurrentProject())
+            self.api.newWorkflowInProject(nameForInstance, self.savedFilename, self.api.getCurrentProject())
 #            
 def openNewWorkflowDialog():
     global app
@@ -378,3 +395,54 @@ def openNewWorkflowDialog():
     global newWorkflowDialogInstance
     newWorkflowDialogInstance.show()
  
+ #----------------
+ 
+ 
+# pop up to load a tree from the Open Tree of Life Project
+class NewOpenTreeOfLifeDialog(QDialog):   
+    # Define the  user interface for a new dialog to be created
+    def __init__(self, ArborAPI,parent=None):
+        super(NewOpenTreeOfLifeDialog, self).__init__(parent)
+        self.api = ArborAPI
+        self.titleText = QLabel("Import a tree from the Open Tree of Life")
+        self.titleText2 = QLabel("Enter the name to give the dataset here:")
+        self.confirmationText = QLabel("")
+        self.nameDialog = QLineEdit()
+        self.titleText3 = QLabel("Enter the OTTol ID to query:")
+        self.ottolidDialog = QLineEdit()
+        self.cancelButton = QPushButton("Cancel")
+        self.acceptButton = QPushButton("Accept")
+        self.layout = QVBoxLayout()
+        self.layout.addWidget(self.titleText)
+        self.layout.addWidget(self.titleText2)
+        self.layout.addWidget(self.nameDialog)
+        self.layout.addWidget(self.titleText3)
+        self.layout.addWidget(self.ottolidDialog)
+        self.layout.addWidget(self.acceptButton)
+        self.layout.addWidget(self.cancelButton)
+        self.setLayout(self.layout)
+        self.cancelButton.clicked.connect(self.closeTreeDialog)
+        self.acceptButton.clicked.connect(self.createNewTreeFromOpenTreeOfLife)
+        
+    def closeTreeDialog(self):
+        self.hide()
+        
+    # the user has entered an OTToLID from the OTL, so lets retrieve it
+    def createNewTreeFromOpenTreeOfLife(self):
+        nameForTree = str(self.nameDialog.text())
+        print "query OpenTreeOfLife from ottolID: ",self.ottolidDialog.text()
+        print "name for the tree is: ",nameForTree
+        print "default project for tree is: ", self.api.getCurrentProject()
+        # need to convert from PyQt4.QtCore.QString to Python string
+        #projectTitle = str(projectTitleAsQstring)
+        # if valid names are entered, then create the tree record 
+        if len(self.api.getCurrentProject())>0:
+            self.hide()
+#           # create project record in the database
+            self.api.newTreeFromOpenTreeOfLife(nameForTree, self.ottolidDialog.text(), self.api.getCurrentProject())
+#            
+def openNewTreeOfLifeDialog():
+    global app
+    print "open new tree dialog"
+    global newOpenTreeOfLifeDialogInstance
+    newOpenTreeOfLifeDialogInstance.show()

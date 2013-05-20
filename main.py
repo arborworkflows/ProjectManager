@@ -37,7 +37,12 @@ class Form(QDialog):
         self.title = QLabel("Arbor Project and File Manager")
         #wf_manager = workflowManager.workflowManager()
         
-        self.horiz_splitter = QSplitter();
+        self.horiz_splitter = QSplitter()
+        
+        #put up a logo
+        pm = QPixmap("Arbor_128px.png")
+        self.arborLogo = QLabel()
+        self.arborLogo.setPixmap(pm);
         
         # list window to show the projects currently stored
         self.projectListWidget = QListWidget(self)
@@ -52,6 +57,7 @@ class Form(QDialog):
         self.datasetListWidget.setObjectName("datasetListWidget")
         
         # put the widgets together in the window but allow them to adjust 
+        self.horiz_splitter.addWidget(self.arborLogo)
         self.horiz_splitter.addWidget(self.projectListWidget)
         self.horiz_splitter.addWidget(self.datatypeListWidget)
         self.horiz_splitter.addWidget(self.datasetListWidget)
@@ -65,6 +71,7 @@ class Form(QDialog):
    # add button tow 2
         button_panel2 = QSplitter();
         self.newTreeButton = QPushButton("Load Tree")
+        self.newTreeFromOpenTreeButton = QPushButton("Load from OTL")
         self.newCharacterButton = QPushButton("Load Character\nMatrix")
         self.newObservationsButton = QPushButton("Load Occurrences")
         self.newSequencesButton = QPushButton("Load Sequences")
@@ -74,7 +81,8 @@ class Form(QDialog):
         button_panel.addWidget(self.newProjectButton)  
         button_panel.addWidget(self.deleteProjectButton)
         button_panel.addWidget(self.deleteDatasetButton)          
-        button_panel2.addWidget(self.newTreeButton)        
+        button_panel2.addWidget(self.newTreeButton)     
+        button_panel2.addWidget(self.newTreeFromOpenTreeButton)
         button_panel2.addWidget(self.newCharacterButton)
         button_panel2.addWidget(self.newObservationsButton)
         button_panel2.addWidget(self.newSequencesButton)
@@ -96,6 +104,7 @@ class Form(QDialog):
         self.deleteProjectButton.clicked.connect(self.deleteSelectedProject)
         self.deleteDatasetButton.clicked.connect(self.deleteSelectedDataset)
         self.newTreeButton.clicked.connect(self.processNewTreeButton)
+        self.newTreeFromOpenTreeButton.clicked.connect(self.processNewTreeFromOpenTreeButton)
         self.newCharacterButton.clicked.connect(self.processNewCharacterButton)
         self.newObservationsButton.clicked.connect(self.processNewObservationsButton)
         self.newSequencesButton.clicked.connect(self.processNewSequencesButton)
@@ -129,16 +138,18 @@ class Form(QDialog):
         
     # user selected a particular project, so display the types for this project    
     def selectProjectItem(self):
-        # now display the types in this project
-        prname = str(self.projectListWidget.currentItem().text())
-        # TODO: do we need a test for a valid project here?  (see selectDataTypeItem)
-        api.setCurrentProject(prname)
-        typeListForProject = api.getListOfTypesForProject(prname)
-        print "api returned types: ",typeListForProject
-        self.datatypeListWidget.clear()
-        self.datasetListWidget.clear()
-        for j in range(0,len(typeListForProject)):
-            self.datatypeListWidget.addItem(typeListForProject[j])
+        # test that there is actually something selected
+        if (self.projectListWidget.currentItem()):
+            # now display the types in this project
+            prname = str(self.projectListWidget.currentItem().text())
+            # TODO: do we need a test for a valid project here?  (see selectDataTypeItem)
+            api.setCurrentProject(prname)
+            typeListForProject = api.getListOfTypesForProject(prname)
+            print "api returned types: ",typeListForProject
+            self.datatypeListWidget.clear()
+            self.datasetListWidget.clear()
+            for j in range(0,len(typeListForProject)):
+                self.datatypeListWidget.addItem(typeListForProject[j])
             
     # user clicked a datatype inside a project.  we want to display all the 
     # instances of this datatype.  If there is nothing selected, then don't fill the instance list
@@ -195,6 +206,9 @@ class Form(QDialog):
 
     def processNewTreeButton(self):
         dialogs.openNewTreeDialog()
+
+    def processNewTreeFromOpenTreeButton(self):
+        dialogs.openNewTreeOfLifeDialog()
  
     def processNewCharacterButton(self):
         dialogs.openNewCharacterDialog()
