@@ -19,7 +19,7 @@ global api
 import dialogs
 
 # add calls to manage files for Arbor
-import ArborFileManagerAPI
+from QtArborFileManager import QtArborFileManager
 
 # global data structures to remember the projects, types, and instances
 projectList = []
@@ -227,7 +227,7 @@ if __name__ == '__main__':
     
     # connect to database and initiaize the API
     global api
-    api = ArborFileManagerAPI.ArborFileManager()
+    api = QtArborFileManager()
     api.initDatabaseConnection()
     
     # Create and show the form
