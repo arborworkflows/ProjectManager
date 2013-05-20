@@ -118,10 +118,10 @@ window.onload = function () {
                                             hl_dataset.classed("selected", false);
                                         }
                                         hl_dataset = d3.select(this);
-                                        hl_dataset.classed("selected", false);
+                                        hl_dataset.classed("selected", true);
                                     })
-                                    .text(function (d) {
-                                        return d;
+                                    .html(function (d) {
+                                        return d + ' <a class="btn btn-mini">preview</a> <a class="btn btn-mini">select</a>';
                                     });
                             });
                         })
