@@ -237,6 +237,7 @@ if __name__ == '__main__':
     dialogs.initializeAllDialogs(api)
     api.projectListChangedSignal.connect(form.updateProjectList)
     api.datasetListChangedSignal.connect(form.selectDataTypeItem)
+    api.datatypeListChangedSignal.connect(form.selectProjectItem)
 
     form.updateProjectList()
     form.show()

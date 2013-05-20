@@ -31,6 +31,9 @@ import urllib2
 # import the recursive algorithm to process phyloXML records and create a mongo collection
 import phyloimport_algorithm
 
+# import the algorithm to add a root to unrooted trees 
+import root_phylotree_algorithm
+
 # parser routine for PhyloXML
 from Bio import Phylo
 
@@ -46,6 +49,7 @@ class ArborFileManager(QObject):
     # emitted when a project is added or deleted
     projectListChangedSignal = pyqtSignal();
     datasetListChangedSignal = pyqtSignal();
+    datatypeListChangedSignal = pyqtSignal();
     
     def __init__(self, parent=None):
         super(ArborFileManager, self).__init__(parent)
@@ -224,11 +228,12 @@ class ArborFileManager(QObject):
         for tree in trees:
             #process tree
             phyloimport_algorithm.recursive_clade(tree, treeCollection)
-        # add a tree record entry to the 'PyloTree' array in the project record
-        self.db.ar_projects.update({"name": projectTitle}, { '$push': {u'PhyloTree': {treename:treefile}}})
-        self.db.ar_projects.update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'PhyloTree'}})
+            # add a tree record entry to the 'PyloTree' array in the project record
+            self.db.ar_projects.update({"name": projectTitle}, { '$push': {u'PhyloTree': {treename:treefile}}})
+            self.db.ar_projects.update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'PhyloTree'}})
 
         # emit a signal so the GUI knows to update
+        self.datatypeListChangedSignal.emit(); 
         self.datasetListChangedSignal.emit();               
   
    # add a tree to the project
@@ -244,13 +249,15 @@ class ArborFileManager(QObject):
         trees = Phylo.parse(handle, treetype)
         #print "length of trees list: ",len(trees)
         for tree in trees:
-            #process tree
             phyloimport_algorithm.recursive_clade(tree, treeCollection)
-        # add a tree record entry to the 'PyloTree' array in the project record
-        self.db.ar_projects.update({"name": projectTitle}, { '$push': {u'PhyloTree': {treename:str(description)}}})
-        self.db.ar_projects.update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'PhyloTree'}})
-        # emit a signal so the GUI knows to update
-        self.datasetListChangedSignal.emit();               
+            # add a tree record entry to the 'PyloTree' array in the project record
+            self.db.ar_projects.update({"name": projectTitle}, { '$push': {u'PhyloTree': {treename:str(description)}}})
+            self.db.ar_projects.update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'PhyloTree'}})
+            # make sure the tree is rooted, so viewers work
+            root_phylotree_algorithm.addRootToTree(treeCollection)
+            # emit a signal so the GUI knows to update
+            self.datatypeListChangedSignal.emit(); 
+            self.datasetListChangedSignal.emit();               
     
     # query from the OpenTreeOfLife.  This routine performs the fetch from OTL,
     # retrieves a newick tree and processes it to load into the Arbor database
@@ -300,6 +307,7 @@ class ArborFileManager(QObject):
         self.db.ar_projects.update({"name": projectTitle}, { '$push': {u'CharacterMatrix': {instancename:filename}}})
         # make sure the character type exists in this project
         self.db.ar_projects.update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'CharacterMatrix'}})
+        self.datatypeListChangedSignal.emit(); 
         self.datasetListChangedSignal.emit();           
         
     # add a character matrix to the project
@@ -332,6 +340,7 @@ class ArborFileManager(QObject):
         self.db.ar_projects.update({"name": projectTitle}, { '$push': {u'Occurrences': {instancename:filename}}})
         # Add the occurrence data type in the project if the record isn't already there
         self.db.ar_projects.update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'Occurrences'}})
+        self.datatypeListChangedSignal.emit(); 
         self.datasetListChangedSignal.emit();           
                 
     # add sequences to the project
@@ -352,7 +361,8 @@ class ArborFileManager(QObject):
         self.db.ar_projects.update({"name": projectTitle}, { '$push': {u'Sequences': {instancename:filename}}})
         # make sure the sequence type exists in this project
         self.db.ar_projects.update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'Sequences'}})
-        self.datasetListChangedSignal.emit();           
+        self.datatypeListChangedSignal.emit();  
+        self.datasetListChangedSignal.emit();          
                             
    # add sequences to the project
     def newWorkflowInProject(self,instancename,filename,projectTitle):
@@ -365,5 +375,6 @@ class ArborFileManager(QObject):
         self.db.ar_projects.update({"name": projectTitle}, { '$push': {u'Workflows': {instancename:filename}}})
         # make sure the workflow type exists in this project
         self.db.ar_projects.update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'Workflows'}})
+        self.datatypeListChangedSignal.emit();  
         self.datasetListChangedSignal.emit();           
                              
