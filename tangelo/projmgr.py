@@ -39,9 +39,16 @@ def post(*pargs, **kwargs):
     return "projmgr.post()"
 
 @tangelo.restful
-def delete(resource, projname, **kwargs):
+def delete(resource, projname, datatype=None, dataset=None):
     if resource != "project":
         return tangelo.HTTPStatusCode(400, "Bad resource type '%s' - allowed types are: project")
 
-    api.deleteProjectNamed(projname)
+    if datatype is None and dataset is not None:
+        return tangelo.HTTPStatusCode(400, "Bad arguments - you cannot specify a dataset without a datatype")
+
+    if datatype is None:
+        api.deleteProjectNamed(projname)
+    else:
+        api.deleteDataset(projname, datatype, dataset)
+
     return "OK"

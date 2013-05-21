@@ -5,6 +5,15 @@ function error_message(msg) {
         .text(msg);
 }
 
+function servicePath(){
+    var pathArgs = Array.slice(arguments).join("/");
+    if (pathArgs.length > 0) {
+        pathArgs = "/" + pathArgs;
+    }
+
+    return "../tangelo/projmgr" + pathArgs;
+}
+
 window.onload = function () {
     "use strict";
 
@@ -111,6 +120,8 @@ window.onload = function () {
 
                             ajax = d3.json("../tangelo/projmgr/project/" + hl_proj.attr("name") + "/" + d);
                             ajax.send("GET", function (err, datasets) {
+                                var dsets;
+
                                 if (err) {
                                     error_message("Could not connect to database");
                                     return;
@@ -120,7 +131,7 @@ window.onload = function () {
                                     .selectAll("div")
                                     .remove();
 
-                                d3.select("#datasets")
+                                dsets = d3.select("#datasets")
                                     .selectAll("div")
                                     .data(datasets)
                                     .enter()
@@ -145,8 +156,36 @@ window.onload = function () {
                                         return d;
                                     })
                                     .html(function (d) {
-                                        return d + ' <a class="btn btn-mini">preview</a> <a class="btn btn-mini">select</a>';
+                                        return d;
                                     });
+
+                                    dsets.append("a")
+                                        .classed("btn", true)
+                                        .classed("btn-mini", true)
+                                        .text("preview");
+
+                                    dsets.append("a")
+                                        .classed("btn", true)
+                                        .classed("btn-mini", true)
+                                        .text("select");
+
+                                    dsets.append("a")
+                                        .classed("btn", true)
+                                        .classed("btn-mini", true)
+                                        .text("delete")
+                                        .on("click", function () {
+                                            var ajax;
+
+                                            ajax = d3.xhr(servicePath("project", hl_proj.attr("name"), hl_type.attr("name"), hl_dataset.attr("name")));
+                                            ajax.send("DELETE", function (e, r) {
+                                                if (e) {
+                                                    console.log(e);
+                                                    return;
+                                                }
+
+                                                console.log(r);
+                                            });
+                                        });
                             });
                         })
                         .attr("name", function (d) {
