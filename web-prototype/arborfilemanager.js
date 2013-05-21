@@ -90,7 +90,7 @@ window.onload = function () {
                             hl_type = d3.select(this);
                             hl_type.classed("selected", true);
 
-                            ajax = d3.json("../tangelo/projmgr/project/" + hl_proj.text() + "/" + d);
+                            ajax = d3.json("../tangelo/projmgr/project/" + hl_proj.attr("name") + "/" + d);
                             ajax.send("GET", function (err, datasets) {
                                 if (err) {
                                     error_message("Could not connect to database");
@@ -122,10 +122,16 @@ window.onload = function () {
                                         hl_dataset = d3.select(this);
                                         hl_dataset.classed("selected", true);
                                     })
+                                    .attr("name", function (d) {
+                                        return d;
+                                    })
                                     .html(function (d) {
                                         return d + ' <a class="btn btn-mini">preview</a> <a class="btn btn-mini">select</a>';
                                     });
                             });
+                        })
+                        .attr("name", function (d) {
+                            return d;
                         })
                         .text(function (d) {
                             return d;
@@ -133,8 +139,11 @@ window.onload = function () {
                 });
 
             })
-            .text(function (d) {
+            .attr("name", function (d) {
                 return d;
+            })
+            .html(function (d) {
+                return d + ' <a class="btn btn-mini">delete</a>';
             });
         });
     }
