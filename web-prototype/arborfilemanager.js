@@ -49,22 +49,37 @@ window.onload = function () {
                     return d;
                 })
                 .on("click", function (d) {
-                    // Move the highlight to the selected project.
+                    // Move the highlight to the selected project (or remove the
+                    // highlight entirely if the selected item is clicked
+                    // again).
                     if (hl_proj !== null) {
                         d3.select("#projects")
                             .select("[name=" + hl_proj + "]")
                             .classed("selected", false);
                     }
-                    hl_proj = d;
-                    d3.select(this)
-                        .classed("selected", true);
+
+                    if (hl_proj !== d) {
+                        hl_proj = d;
+                        d3.select(this)
+                            .classed("selected", true);
+                    } else {
+                        hl_proj = null;
+                    }
+
+                    hl_type = null;
+                    hl_dataset = null;
 
                     // Refresh the data type list.
-                    refreshDatatypes(hl_proj);
+                    if (hl_proj !== null) {
+                        refreshDatatypes(hl_proj);
+                    } else {
+                        clearDatatypes();
+                    }
 
                     // Clear the data set list.
                     clearDatasets();
                 });
+
             fresh.append("a")
                 .classed("btn", true)
                 .classed("btn-mini", true)
@@ -138,18 +153,30 @@ window.onload = function () {
                     return d;
                 })
                 .on("click", function (d) {
-                    // Move the highlight to the selected datatype.
+                    // Move the highlight to the selected datatype (or remove
+                    // the highlight entirely if the selected item is clicked
+                    // again).
                     if (hl_type !== null) {
                         d3.select("#datatypes")
                             .select("[name=" + hl_type + "]")
                             .classed("selected", false);
                     }
-                    hl_type = d;
-                    d3.select(this)
-                        .classed("selected", true);
+                    if (hl_type !== d) {
+                        hl_type = d;
+                        d3.select(this)
+                            .classed("selected", true);
+                    } else {
+                        hl_type = null;
+                    }
+
+                    hl_dataset = null;
 
                     // Refresh the data set list.
-                    refreshDatasets(hl_proj, hl_type);
+                    if (hl_type !== null) {
+                        refreshDatasets(hl_proj, hl_type);
+                    } else {
+                        clearDatasets();
+                    }
                 });
 
             if (fade) {
@@ -202,15 +229,21 @@ window.onload = function () {
                     return d;
                 })
                 .on("click", function (d) {
-                    // Move the highlight to the selected dataset.
+                    // Move the highlight to the selected dataset (or remove the
+                    // highlight entirely if the selected item is clicked
+                    // again).
                     if (hl_dataset !== null) {
                         d3.select("#datasets")
                             .select("[name=" + hl_dataset + "]")
                             .classed("selected", false);
                     }
-                    hl_dataset = d;
-                    d3.select(this)
-                        .classed("selected", true);
+                    if (hl_dataset !== d) {
+                        hl_dataset = d;
+                        d3.select(this)
+                            .classed("selected", true);
+                    } else {
+                        hl_dataset = null;
+                    }
                 });
 
             fresh.append("a")
@@ -268,6 +301,15 @@ window.onload = function () {
 
         hl_dataset = null;
     }
+
+    function clearDatatypes() {
+        d3.select("#datatypes")
+            .selectAll("*")
+            .remove();
+
+        hl_type = null;
+    }
+
 
     d3.select("#newproject-ok")
         .on("click", function () {
