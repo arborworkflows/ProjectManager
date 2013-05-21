@@ -173,11 +173,13 @@ window.onload = function () {
     }
 
     function refreshDatasets(project, type, fade) {
-        var ajax,
-            items;
+        var ajax;
 
         ajax = d3.json(servicePath("project", project, type));
         ajax.send("GET", function (e, datasets) {
+            var items,
+                fresh;
+
             if (e) {
                 error_message("Error!");
                 console.log(e);
@@ -190,7 +192,7 @@ window.onload = function () {
                     return d;
                 });
 
-            items.enter()
+            fresh = items.enter()
                 .append("div")
                 .classed("item", true)
                 .attr("name", function (d) {
@@ -211,6 +213,24 @@ window.onload = function () {
                         .classed("selected", true);
                 });
 
+            fresh.append("a")
+                .classed("btn", true)
+                .classed("btn-mini", true)
+                .text("delete")
+                .on("click", function () {
+                    deleteDataset(hl_proj, hl_type, d3.select(this.parentNode).attr("name"));
+                });
+
+            fresh.append("a")
+                .classed("btn", true)
+                .classed("btn-mini", true)
+                .text("preview");
+
+            fresh.append("a")
+                .classed("btn", true)
+                .classed("btn-mini", true)
+                .text("select");
+
             if (fade) {
                 items.exit()
                     .transition()
@@ -222,6 +242,22 @@ window.onload = function () {
                 items.exit()
                     .remove();
             }
+        });
+    }
+
+    function deleteDataset(project, type, dataset) {
+        var ajax;
+
+        ajax = d3.xhr(servicePath("project", project, type, dataset));
+        ajax.send("DELETE", function (e, r) {
+            if (e) {
+                error_message("Error!");
+                console.log(e);
+                return;
+            }
+
+            hl_dataset = null;
+            refreshDatasets(hl_proj, hl_type, true);
         });
     }
 
