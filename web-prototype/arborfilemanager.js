@@ -25,7 +25,7 @@ window.onload = function () {
         var ajax,
             items;
 
-        ajax = d3.json("../tangelo/projmgr/project");
+        ajax = d3.json(servicePath("project"));
         ajax.send("GET", function (err, projects) {
             if (err) {
                 error_message("Could not connect to database");
@@ -80,7 +80,7 @@ window.onload = function () {
                     .text("delete")
                     .attr("disabled", null);
 
-                ajax = d3.json("../tangelo/projmgr/project/" + d);
+                ajax = d3.json(servicePath("project", d));
                 ajax.send("GET", function (err, types) {
                     if (err) {
                         console.log(err);
@@ -118,7 +118,7 @@ window.onload = function () {
                             hl_type = d3.select(this);
                             hl_type.classed("selected", true);
 
-                            ajax = d3.json("../tangelo/projmgr/project/" + hl_proj.attr("name") + "/" + d);
+                            ajax = d3.json(servicePath("project", hl_proj.attr("name"), d));
                             ajax.send("GET", function (err, datasets) {
                                 var dsets;
 
@@ -213,7 +213,7 @@ window.onload = function () {
                 name = d3.select(this.parentNode).attr("name");
                 console.log(name);
 
-                ajax = d3.xhr("../tangelo/projmgr/project/" + name);
+                ajax = d3.xhr(servicePath("project", name));
                 ajax.send("DELETE", function (e, r) {
                     if (e) {
                         console.log(e);
@@ -241,7 +241,7 @@ window.onload = function () {
             name = encodeURI(d3.select("#newproject-name").property("value"));
 
             if (name !== "") {
-                ajax = d3.xhr("../tangelo/projmgr/project/" + name);
+                ajax = d3.xhr(servicePath("project", name));
                 ajax.send("PUT", function (err, response) {
                     if (err) {
                         console.log("error: ");
