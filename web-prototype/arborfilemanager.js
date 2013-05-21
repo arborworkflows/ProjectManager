@@ -21,16 +21,16 @@ window.onload = function () {
         hl_type = null,
         hl_dataset = null;
 
-    function refreshProjects(){
+    function refreshProjects(fade){
         var ajax,
-            items;
+            items,
+            fresh;
 
         ajax = d3.json(servicePath("project"));
         ajax.send("GET", function (e, projects) {
             if (e) {
                 error_message("Error!");
                 console.log(e);
-                return false;
             }
 
             items = d3.select("#projects")
@@ -39,7 +39,7 @@ window.onload = function () {
                     return d;
                 });
 
-            items.enter()
+            fresh = items.enter()
                 .append("div")
                 .classed("item", true)
                 .attr("name", function (d) {
@@ -65,19 +65,33 @@ window.onload = function () {
                     // Clear the data set list.
                     clearDatasets();
                 });
+            fresh.append("a")
+                .classed("btn", true)
+                .classed("btn-mini", true)
+                .text("delete")
+                .on("click", function () {
+                    deleteProject(d3.select(this).attr("name"));
+                });
 
-            items.exit()
-                .transition()
-                .duration(1000)
-                .style("height", "0px")
-                .style("opacity", 0.0)
-                .remove();
+            if (fade) {
+                items.exit()
+                    .transition()
+                    .duration(1000)
+                    .style("height", "0px")
+                    .style("opacity", 0.0)
+                    .remove();
+            } else {
+                items.exit()
+                    .remove();
+            }
 
-            return true;
+            if (hl_proj !== null) {
+                refreshDatatypes(hl_proj, fade);
+            }
         });
     }
 
-    function refreshDatatypes(project) {
+    function refreshDatatypes(project, fade) {
         var ajax,
             items;
 
@@ -119,16 +133,25 @@ window.onload = function () {
                     refreshDatasets(hl_proj, hl_type);
                 });
 
-            items.exit()
-                .transition()
-                .duration(1000)
-                .style("height", "0px")
-                .style("opacity", 0.0)
-                .remove();
+            if (fade) {
+                items.exit()
+                    .transition()
+                    .duration(1000)
+                    .style("height", "0px")
+                    .style("opacity", 0.0)
+                    .remove();
+            } else {
+                items.exit()
+                    .remove();
+            }
+
+            if (hl_dataset !== null) {
+                refreshDatatypes(hl_proj, hl_dataset, fade);
+            }
         });
     }
 
-    function refreshDatasets(project, type) {
+    function refreshDatasets(project, type, fade) {
         var ajax,
             items;
 
@@ -159,7 +182,7 @@ window.onload = function () {
                     // Move the highlight to the selected dataset.
                     if (hl_dataset !== null) {
                         d3.select("#datasets")
-                            .select("[name=" + d + "]")
+                            .select("[name=" + hl_dataset + "]")
                             .classed("selected", false);
                     }
                     hl_dataset = d;
@@ -167,12 +190,17 @@ window.onload = function () {
                         .classed("selected", true);
                 });
 
-            items.exit()
-                .transition()
-                .duration(1000)
-                .style("height", "0px")
-                .style("opacity", 0.0)
-                .remove();
+            if (fade) {
+                items.exit()
+                    .transition()
+                    .duration(1000)
+                    .style("height", "0px")
+                    .style("opacity", 0.0)
+                    .remove();
+            } else {
+                items.exit()
+                    .remove();
+            }
         });
     }
 
@@ -200,10 +228,10 @@ window.onload = function () {
                         return;
                     }
 
-                    refreshProjects();
+                    refreshProjects(true);
                 });
             }
         });
 
-    refreshProjects();
+    refreshProjects(false);
 };
