@@ -8,17 +8,19 @@ function error_message(msg) {
 window.onload = function () {
     "use strict";
 
-    var ajax,
-        hl_proj = null,
+    var hl_proj = null,
         hl_type = null,
         hl_dataset = null;
 
-    ajax = d3.json("../tangelo/projmgr/project");
-    ajax.send("GET", function (err, projects) {
-        if (err) {
-            error_message("Could not connect to database");
-            return;
-        }
+    function populate(projects){
+        var ajax;
+
+        ajax = d3.json("../tangelo/projmgr/project");
+        ajax.send("GET", function (err, projects) {
+            if (err) {
+                error_message("Could not connect to database");
+                return;
+            }
 
         d3.select("#projects")
             .selectAll("div")
@@ -134,5 +136,29 @@ window.onload = function () {
             .text(function (d) {
                 return d;
             });
-    });
+        });
+    }
+
+    d3.select("#newproject-ok")
+        .on("click", function () {
+            var name,
+                ajax;
+
+            name = encodeURI(d3.select("#newproject-name").property("value"));
+
+            if (name !== "") {
+                ajax = d3.xhr("../tangelo/projmgr/project/" + name);
+                ajax.send("PUT", function (err, response) {
+                    if (err) {
+                        console.log("error: ");
+                        console.log(err);
+                        return;
+                    }
+
+                    populate();
+                });
+            }
+        });
+
+    populate();
 };

@@ -27,8 +27,12 @@ def get(*pargs, **query_args):
         return tangelo.HTTPStatusCode(400, "Bad resource type '%s' - allowed types are: %s" % (resource_type, ", ".join(allowed)))
 
 @tangelo.restful
-def put(*pargs, **kwargs):
-    return "projmgr.put()"
+def put(resource, projname, **kwargs):
+    if resource != "project":
+        return tangelo.HTTPStatusCode(400, "Bad resource type '%s' - allowed types are: project")
+
+    api.newProject(projname)
+    return "OK"
 
 @tangelo.restful
 def post(*pargs, **kwargs):
