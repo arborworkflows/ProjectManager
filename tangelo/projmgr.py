@@ -39,5 +39,9 @@ def post(*pargs, **kwargs):
     return "projmgr.post()"
 
 @tangelo.restful
-def delete(*pargs, **kwargs):
-    return "projmgr.delete()"
+def delete(resource, projname, **kwargs):
+    if resource != "project":
+        return tangelo.HTTPStatusCode(400, "Bad resource type '%s' - allowed types are: project")
+
+    api.deleteProjectNamed(projname)
+    return "OK"

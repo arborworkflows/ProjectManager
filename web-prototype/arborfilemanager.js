@@ -13,7 +13,8 @@ window.onload = function () {
         hl_dataset = null;
 
     function populate(projects){
-        var ajax;
+        var ajax,
+            items;
 
         ajax = d3.json("../tangelo/projmgr/project");
         ajax.send("GET", function (err, projects) {
@@ -22,14 +23,17 @@ window.onload = function () {
                 return;
             }
 
-        d3.select("#projects")
+        items = d3.select("#projects")
             .selectAll("div")
-            .data(projects)
-            .enter()
+            .data(projects, function (d) {
+                return d;
+            });
+        items.enter()
             .append("div")
             .classed("item", true)
             .on("click", function (d) {
-                var ajax;
+                var ajax,
+                    delbutton;
 
                 // If the click was on the highlighted item, bail.
                 //
@@ -51,6 +55,21 @@ window.onload = function () {
                 }
                 hl_proj = d3.select(this);
                 hl_proj.classed("selected", true);
+
+                delbutton = d3.select(this)
+                    .select("a.btn")
+                    .attr("disabled", true);
+                delbutton.text("...");
+                delbutton.transition()
+                    .delay(1000)
+                    .text("..");
+                delbutton.transition()
+                    .delay(2000)
+                    .text(".");
+                delbutton.transition()
+                    .delay(3000)
+                    .text("delete")
+                    .attr("disabled", null);
 
                 ajax = d3.json("../tangelo/projmgr/project/" + d);
                 ajax.send("GET", function (err, types) {
@@ -142,9 +161,36 @@ window.onload = function () {
             .attr("name", function (d) {
                 return d;
             })
-            .html(function (d) {
-                return d + ' <a class="btn btn-mini">delete</a>';
+            .text(function (d) {
+                return d;
+            })
+            .append("a")
+            .classed("btn", true)
+            .classed("btn-mini", true)
+            .on("click", function () {
+                var ajax,
+                    name;
+
+                name = d3.select(this.parentNode).attr("name");
+                console.log(name);
+
+                ajax = d3.xhr("../tangelo/projmgr/project/" + name);
+                ajax.send("DELETE", function (e, r) {
+                    if (e) {
+                        console.log(e);
+                        return;
+                    }
+
+                    populate();
+                });
             });
+
+            items.exit()
+                .transition()
+                .duration(1000)
+                .style("height", "0px")
+                .style("opacity", 0.0)
+                .remove();
         });
     }
 
