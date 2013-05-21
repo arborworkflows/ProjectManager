@@ -70,7 +70,7 @@ window.onload = function () {
                 .classed("btn-mini", true)
                 .text("delete")
                 .on("click", function () {
-                    deleteProject(d3.select(this).attr("name"));
+                    deleteProject(d3.select(this.parentNode).attr("name"));
                 });
 
             if (fade) {
@@ -87,7 +87,26 @@ window.onload = function () {
 
             if (hl_proj !== null) {
                 refreshDatatypes(hl_proj, fade);
+            } else {
+                hl_type = null;
+                hl_dataset = null;
             }
+        });
+    }
+
+    function deleteProject(project) {
+        var ajax;
+
+        ajax = d3.xhr(servicePath("project", project));
+        ajax.send("DELETE", function (e, r) {
+            if (e) {
+                error_message("Error!");
+                console.log(e);
+                return;
+            }
+
+            hl_proj = null;
+            refreshProjects(true);
         });
     }
 
@@ -145,8 +164,10 @@ window.onload = function () {
                     .remove();
             }
 
-            if (hl_dataset !== null) {
-                refreshDatatypes(hl_proj, hl_dataset, fade);
+            if (hl_type !== null) {
+                refreshDatasets(hl_proj, hl_type, fade);
+            } else {
+                hl_dataset = null;
             }
         });
     }
