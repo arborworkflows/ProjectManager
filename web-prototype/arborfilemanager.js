@@ -85,6 +85,7 @@ window.onload = function () {
                 .classed("btn-mini", true)
                 .text("delete")
                 .on("click", function () {
+                    d3.event.stopPropagation();
                     deleteProject(d3.select(this.parentNode).attr("name"));
                 });
 
@@ -110,19 +111,31 @@ window.onload = function () {
     }
 
     function deleteProject(project) {
-        var ajax;
-
-        ajax = d3.xhr(servicePath("project", project));
-        ajax.send("DELETE", function (e, r) {
-            if (e) {
-                error_message("Error!");
-                console.log(e);
-                return;
-            }
-
-            hl_proj = null;
-            refreshProjects(true);
+        $("#confirmation-dialog").modal("show");
+        $("#confirmation-dialog").on("hide", function () {
+            d3.select("#confirmation-yes")
+                .on("click", null);
         });
+
+        d3.select("#confirmation-action")
+            .html("You are about to delete project <i>" + project + "</i>.");
+
+        d3.select("#confirmation-yes")
+            .on("click", function () {
+                var ajax;
+
+                ajax = d3.xhr(servicePath("project", project));
+                ajax.send("DELETE", function (e, r) {
+                    if (e) {
+                        error_message("Error!");
+                        console.log(e);
+                        return;
+                    }
+
+                    hl_proj = null;
+                    refreshProjects(true);
+                });
+            });
     }
 
     function refreshDatatypes(project, fade) {
@@ -251,18 +264,25 @@ window.onload = function () {
                 .classed("btn-mini", true)
                 .text("delete")
                 .on("click", function () {
+                    d3.event.stopPropagation();
                     deleteDataset(hl_proj, hl_type, d3.select(this.parentNode).attr("name"));
                 });
 
             fresh.append("a")
                 .classed("btn", true)
                 .classed("btn-mini", true)
-                .text("preview");
+                .text("preview")
+                .on("click", function () {
+                    d3.event.stopPropagation();
+                });
 
             fresh.append("a")
                 .classed("btn", true)
                 .classed("btn-mini", true)
-                .text("select");
+                .text("select")
+                .on("click", function () {
+                    d3.event.stopPropagation();
+                });
 
             if (fade) {
                 items.exit()
@@ -279,19 +299,31 @@ window.onload = function () {
     }
 
     function deleteDataset(project, type, dataset) {
-        var ajax;
-
-        ajax = d3.xhr(servicePath("project", project, type, dataset));
-        ajax.send("DELETE", function (e, r) {
-            if (e) {
-                error_message("Error!");
-                console.log(e);
-                return;
-            }
-
-            hl_dataset = null;
-            refreshDatasets(hl_proj, hl_type, true);
+        $("#confirmation-dialog").modal("show");
+        $("#confirmation-dialog").on("hide", function () {
+            d3.select("#confirmation-yes")
+                .on("click", null);
         });
+
+        d3.select("#confirmation-action")
+            .html("You are about to delete dataset <i>" + dataset + "</i> in project <i>" + project + "</i>.");
+
+        d3.select("#confirmation-yes")
+            .on("click", function () {
+                var ajax;
+
+                ajax = d3.xhr(servicePath("project", project, type, dataset));
+                ajax.send("DELETE", function (e, r) {
+                    if (e) {
+                        error_message("Error!");
+                        console.log(e);
+                        return;
+                    }
+
+                    hl_dataset = null;
+                    refreshDatasets(hl_proj, hl_type, true);
+                });
+            });
     }
 
     function clearDatasets() {
