@@ -364,5 +364,10 @@ window.onload = function () {
             }
         });
 
+    d3.selectAll("[id|=load]")
+        .on("click", function () {
+            alert("Action for \"" + d3.select(this).text() + "\" not implemented yet :(");
+        });
+
     refreshProjects(false);
 };
