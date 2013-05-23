@@ -89,6 +89,15 @@ window.onload = function () {
                     deleteProject(d3.select(this.parentNode).attr("name"));
                 });
 
+            fresh.append("a")
+                .classed("btn", true)
+                .classed("btn-mini", true)
+                .text("new dataset")
+                .on("click", function () {
+                    d3.event.stopPropagation();
+                    newDataset(d3.select(this.parentNode).attr("name"));
+                });
+
             if (fade) {
                 items.exit()
                     .transition()
@@ -108,6 +117,19 @@ window.onload = function () {
                 hl_dataset = null;
             }
         });
+    }
+
+    function newDataset(project) {
+        $("#newdataset-dialog").modal("show");
+        $("#newdataset-dialog").on("hide", function () {
+            d3.select("#newdataset-yes")
+                .on("click", null);
+        });
+
+        d3.select("#newdataset-ok")
+            .on("click", function () {
+                alert("new dataset!");
+            });
     }
 
     function deleteProject(project) {
@@ -362,11 +384,6 @@ window.onload = function () {
                     refreshProjects(true);
                 });
             }
-        });
-
-    d3.selectAll("[id|=load]")
-        .on("click", function () {
-            alert("Action for \"" + d3.select(this).text() + "\" not implemented yet :(");
         });
 
     refreshProjects(false);
