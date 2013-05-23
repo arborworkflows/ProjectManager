@@ -103,6 +103,29 @@
         <h3>Add new dataset</h3>
     </div>
     <div class="modal-body">
+        <label class=radio>
+            <input name=newdataset-type type=radio id=tree checked>Tree</input>
+        </label>
+        <label class=radio>
+            <input name=newdataset-type type=radio id=otl>OTL</input>
+        </label>
+        <label class=radio>
+            <input name=newdataset-type type=radio id=character-matrix>Character matrix</input>
+        </label>
+        <label class=radio>
+            <input name=newdataset-type type=radio id=occurrences>Occurrences</input>
+        </label>
+        <label class=radio>
+            <input name=newdataset-type type=radio id=sequences>Sequences</input>
+        </label>
+        <label class=radio>
+            <input name=newdataset-type type=radio id=workflow>Workflow</input>
+        </label>
+
+        <a class=btn id=newdataset-select>Select file</a>
+        <div id=newdataset-filename></div>
+
+        <input id=newdataset-file type=file style="display:none"></input>
     </div>
     <div class="modal-footer">
         <a href=# class=btn data-dismiss=modal>Cancel</a>

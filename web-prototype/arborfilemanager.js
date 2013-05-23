@@ -19,7 +19,8 @@ window.onload = function () {
 
     var hl_proj = null,
         hl_type = null,
-        hl_dataset = null;
+        hl_dataset = null,
+        loadfile = null;
 
     function refreshProjects(fade){
         var ajax,
@@ -125,11 +126,6 @@ window.onload = function () {
             d3.select("#newdataset-yes")
                 .on("click", null);
         });
-
-        d3.select("#newdataset-ok")
-            .on("click", function () {
-                alert("new dataset!");
-            });
     }
 
     function deleteProject(project) {
@@ -383,6 +379,60 @@ window.onload = function () {
 
                     refreshProjects(true);
                 });
+            }
+        });
+
+    d3.select("#newdataset-select")
+        .on("click", function () {
+            $("#newdataset-file").click();
+        });
+
+    d3.select("#newdataset-file")
+        .on("change", function () {
+            loadfile = d3.event.target.files[0];
+            d3.select("#newdataset-filename")
+                .text(loadfile.name);
+        });
+
+    d3.select("#newdataset-ok")
+        .on("click", function () {
+            var filename,
+                type;
+
+            if (loadfile === null) {
+                alert("loadfile is null!");
+                return;
+            }
+
+            type = d3.select("input[name=newdataset-type]:checked").attr("id");
+            switch(type){
+                case "tree":
+                    alert("Type: " + type + ", file: " + loadfile.name);
+                    break;
+
+                case "otl":
+                    alert("Type: " + type + ", file: " + loadfile.name);
+                    break;
+
+                case "character-matrix":
+                    alert("Type: " + type + ", file: " + loadfile.name);
+                    break;
+
+                case "occurrences":
+                    alert("Type: " + type + ", file: " + loadfile.name);
+                    break;
+
+                case "sequences":
+                    alert("Type: " + type + ", file: " + loadfile.name);
+                    break;
+
+                case "workflow":
+                    alert("Type: " + type + ", file: " + loadfile.name);
+                    break;
+
+                default:
+                    throw "Serious error: type was '" + type + "'";
+                    break;
             }
         });
 
