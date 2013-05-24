@@ -6,7 +6,7 @@ function error_message(msg) {
 }
 
 function servicePath(){
-    var pathArgs = Array.slice(arguments).join("/");
+    var pathArgs = $.makeArray(arguments).join("/");
     if (pathArgs.length > 0) {
         pathArgs = "/" + pathArgs;
     }
@@ -156,6 +156,13 @@ window.onload = function () {
             });
     }
 
+    function clearDatatypeSelection() {
+        hl_type = null;
+        d3.select("#datatypes")
+            .selectAll("div")
+            .classed("selected", false);
+    }
+
     function refreshDatatypes(project, fade) {
         var ajax,
             items;
@@ -197,7 +204,7 @@ window.onload = function () {
                         d3.select(this)
                             .classed("selected", true);
                     } else {
-                        hl_type = null;
+                        clearDatatypeSelection();
                     }
 
                     hl_dataset = null;
@@ -209,6 +216,10 @@ window.onload = function () {
                         clearDatasets();
                     }
                 });
+
+            items.classed("selected", function (d) {
+                return d === hl_type;
+            });
 
             if (fade) {
                 items.exit()
@@ -397,43 +408,81 @@ window.onload = function () {
     d3.select("#newdataset-ok")
         .on("click", function () {
             var filename,
-                type;
+                datasetname,
+                reader;
 
             if (loadfile === null) {
                 alert("loadfile is null!");
                 return;
             }
 
-            type = d3.select("input[name=newdataset-type]:checked").attr("id");
-            switch(type){
-                case "tree":
-                    alert("Type: " + type + ", file: " + loadfile.name);
-                    break;
-
-                case "otl":
-                    alert("Type: " + type + ", file: " + loadfile.name);
-                    break;
-
-                case "character-matrix":
-                    alert("Type: " + type + ", file: " + loadfile.name);
-                    break;
-
-                case "occurrences":
-                    alert("Type: " + type + ", file: " + loadfile.name);
-                    break;
-
-                case "sequences":
-                    alert("Type: " + type + ", file: " + loadfile.name);
-                    break;
-
-                case "workflow":
-                    alert("Type: " + type + ", file: " + loadfile.name);
-                    break;
-
-                default:
-                    throw "Serious error: type was '" + type + "'";
-                    break;
+            datasetname = d3.select("#newdataset-name").property("value");
+            console.log(datasetname);
+            if (datasetname === "") {
+                alert("datasetname is blank!");
+                return;
             }
+
+            reader = new FileReader();
+            reader.onload = function (e) {
+                var text,
+                    type;
+
+                type = d3.select("input[name=newdataset-type]:checked").attr("id");
+                text = e.target.result;
+
+                switch(type){
+                    case "tree":
+                        $.ajax({
+                            url: servicePath("project", hl_proj, datasetname),
+                            type: "PUT",
+                            dataType: "text",
+                            data: $.param({
+                                data: text,
+                                filename: loadfile.name,
+                                filetype: "phyloxml"
+                            }),
+                            success: function (response) {
+                                console.log("success! " + response);
+                            },
+                            error: function (xhr, status, err) {
+                                console.log("error :(");
+                                console.log("xhr: " + xhr);
+                                console.log("status: " + status);
+                                console.log("error: " + err);
+                            }
+                        });
+
+                        refreshDatasets(hl_proj, "PhyloTree");
+                        break;
+
+                    case "otl":
+                        alert("Type: " + type + ", file: " + loadfile.name);
+                        break;
+
+                    case "character-matrix":
+                        alert("Type: " + type + ", file: " + loadfile.name);
+                        break;
+
+                    case "occurrences":
+                        alert("Type: " + type + ", file: " + loadfile.name);
+                        break;
+
+                    case "sequences":
+                        alert("Type: " + type + ", file: " + loadfile.name);
+                        break;
+
+                    case "workflow":
+                        alert("Type: " + type + ", file: " + loadfile.name);
+                        break;
+
+                    default:
+                        throw "Serious error: type was '" + type + "'";
+                        break;
+                }
+            };
+            reader.readAsText(loadfile);
+
         });
 
     refreshProjects(false);
