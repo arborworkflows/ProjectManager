@@ -42,8 +42,8 @@ class QtArborFileManager(ArborFileManager, QObject):
         self.projectListChangedSignal.emit();
 
     # add a tree to the project
-    def newTreeInProject(self,treename,treefile,projectTitle):
-        self.super.newTreeInProject(treename, treefile, projectTitle)
+    def newTreeInProject(self,treename,treefile,projectTitle, treetype):
+        self.super.newTreeInProject(treename, treefile, projectTitle, treetype)
 
         # emit a signal so the GUI knows to update
         self.datatypeListChangedSignal.emit()

@@ -2,7 +2,8 @@
 <script src=/lib/jquery-1.8.2.min.js></script>
 <script src=/lib/tangelo.min.js></script>
 <script src=/lib/bootstrap.js></script>
-<script src=/lib/d3.v3.min.js></script>
+<!--<script src=/lib/d3.v3.min.js></script>-->
+<script src="http://d3js.org/d3.v3.js" charset="utf-8"></script>
 
 <link href=/css/tangelo.css rel=stylesheet>
 
@@ -46,19 +47,100 @@
 <h1>Arbor Project Manager</h1>
 
 <div class=row>
-    <div class=span3>
+    <div class=span4>
         <strong>Project</strong>
         <div id=projects>
         </div>
     </div>
-    <div class=span3>
+    <div class=span4>
         <strong>Data Types</strong>
         <div id=datatypes>
         </div>
     </div>
-    <div class=span3>
+    <div class=span4>
         <strong>Data Sets</strong>
         <div id=datasets>
         </div>
+    </div>
+</div>
+
+<div class=row>
+    <a id=newproject href=#newproject-dialog class="span12 btn" data-toggle=modal>New project</a>
+</div>
+
+<div id=newproject-dialog class="modal hide">
+    <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h3>Add new project</h3>
+    </div>
+    <div class="modal-body">
+        <p>Enter the name of the new project:</p>
+        <input id=newproject-name></input>
+    </div>
+    <div class="modal-footer">
+        <a href=# class=btn data-dismiss=modal>Cancel</a>
+        <a id=newproject-ok href=# class="btn btn-primary" data-dismiss=modal>Ok</a>
+    </div>
+</div>
+
+<div id=confirmation-dialog class="modal hide">
+    <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h3>Confirm Action</h3>
+    </div>
+    <div class="modal-body">
+        <div id=confirmation-action></div>
+        <h2>Are you sure?</h3>
+    </div>
+    <div class="modal-footer">
+        <a href=# class=btn data-dismiss=modal>No</a>
+        <a id=confirmation-yes href=# class="btn btn-primary" data-dismiss=modal>Yes</a>
+    </div>
+</div>
+
+<div id=newdataset-dialog class="modal hide">
+    <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h3>Add new dataset</h3>
+    </div>
+    <div class="modal-body">
+        <h4>Data type</h4>
+        <label class=radio>
+            <input name=newdataset-type type=radio id=tree checked>Tree</input>
+        </label>
+        <label class=radio>
+            <input name=newdataset-type type=radio id=otl disabled>OTL</input>
+        </label>
+        <label class=radio>
+            <input name=newdataset-type type=radio id=character-matrix disabled>Character matrix</input>
+        </label>
+        <label class=radio>
+            <input name=newdataset-type type=radio id=occurrences disabled>Occurrences</input>
+        </label>
+        <label class=radio>
+            <input name=newdataset-type type=radio id=sequences disabled>Sequences</input>
+        </label>
+        <label class=radio>
+            <input name=newdataset-type type=radio id=workflow disabled>Workflow</input>
+        </label>
+
+        <h4>Dataset name</h4>
+        <input id=newdataset-name></input>
+
+        <h4>Dataset file</h4>
+        <div class=row>
+            <div class=span2>
+                <a class=btn id=newdataset-select>Select file</a>
+            </div>
+            <div class=span4>
+                <div id=newdataset-filename></div>
+            </div>
+        </div>
+
+        <input id=newdataset-file type=file style="display:none"></input>
+    </div>
+    <div class="modal-footer">
+        <a href=# class=btn data-dismiss=modal>Cancel</a>
+        <a id=newdataset-ok href=# class="btn btn-primary" data-dismiss=modal>Ok</a>
     </div>
 </div>

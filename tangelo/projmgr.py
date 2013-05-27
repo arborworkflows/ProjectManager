@@ -27,13 +27,45 @@ def get(*pargs, **query_args):
         return tangelo.HTTPStatusCode(400, "Bad resource type '%s' - allowed types are: %s" % (resource_type, ", ".join(allowed)))
 
 @tangelo.restful
-def put(*pargs, **kwargs):
-    return "projmgr.put()"
+def put(resource, projname, datasetname=None, data=None, filename=None, filetype=None, **kwargs):
+    if resource != "project":
+        return tangelo.HTTPStatusCode(400, "Bad resource type '%s' - allowed types are: project")
+
+    if datasetname is None:
+        api.newProject(projname)
+    else:
+        if filename is None:
+            return tangelo.HTTPStatusCode(400, "Missing argument 'filename'")
+
+        if filetype is None:
+            return tangelo.HTTPStatusCode(400, "Missing argument 'filetype'")
+
+        if data is None:
+            return tangelo.HTTPStatusCode(400, "Missing argument 'data'")
+
+        if datasetname is None:
+            return tangelo.HTTPStatusCode(400, "Missing argument 'datasetname'")
+
+        api.newTreeInProjectFromString(datasetname, data, projname, filename, filetype)
+
+    return "OK"
 
 @tangelo.restful
 def post(*pargs, **kwargs):
     return "projmgr.post()"
 
 @tangelo.restful
-def delete(*pargs, **kwargs):
-    return "projmgr.delete()"
+def delete(resource, projname, datatype=None, dataset=None):
+    if resource != "project":
+        return tangelo.HTTPStatusCode(400, "Bad resource type '%s' - allowed types are: project")
+
+    # (This is expressing xor)
+    if (datatype is None) != (dataset is None):
+        return tangelo.HTTPStatusCode(400, "Bad arguments - 'datatype' and 'dataset' must both be specified if either one is specified")
+
+    if datatype is None:
+        api.deleteProjectNamed(projname)
+    else:
+        api.deleteDataset(projname, datatype, dataset)
+
+    return "OK"
