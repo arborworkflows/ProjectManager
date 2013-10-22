@@ -30,10 +30,12 @@ import urllib2
 
 
 # import the recursive algorithm to process phyloXML records and create a mongo collection
-import phyloimport_algorithm
+#import phyloimport_algorithm
 
 # import the algorithm to add a root to unrooted trees 
 #import root_phylotree_algorithm
+
+import ArborAlgorithmManagerAPI
 
 # parser routine for PhyloXML
 from Bio import Phylo
@@ -41,7 +43,9 @@ from Bio import Phylo
 # parser routine for fasta files & sequences
 from Bio import SeqIO
 
-class ArborFileManager:
+    
+class ArborFileManager:    
+    
     def __init__(self):
         self.projectList = []
         self.datatypeList = []
@@ -53,11 +57,12 @@ class ArborFileManager:
         # all collections created have a prefix to destinguish arbor collections
         # from other collections in the database.  The default can be changed
         # through exercsting the API call to set an alternative string.
-        self.prefixString = 'ar_'
+        self.prefixString = 'ar_'   
 
     # change the default prefix string
     def setPrefixString(self,newstr):
        self.prefixString = newstr;
+       
 
     # allow for the default parameters for the mongo instance to be changed
     def setMongoHost(self,hostname):
@@ -121,7 +126,7 @@ class ArborFileManager:
         # pick the 'result' field from the query
         newlist = []
         project = self.db.ar_projects.find_one({"name" : projname})
-        print "found project record: ", project
+        #print "found project record: ", project
         # some projects may not have dataypes yet, true during initial development at least
         if u'datatypes' in project:
             projecttypes = project[u'datatypes']
@@ -153,6 +158,11 @@ class ArborFileManager:
         result = self.db.ar_projects.remove({ 'name' : projectName})
         return result
 
+    # we might change the naming algorithm later, so lets use this method to lookup the names
+    def returnCollectionForObjectByName(self,projectName,datatypeName, datasetName):
+        collectionName = self.prefixString+projectName+"_"+datatypeName+"_"+datasetName
+        return collectionName;
+        
      # find and remove a dataset instance
     def deleteDataset(self,projectName,datatypeName, datasetName):
         print "removing dataset from project named: ",projectName
@@ -350,3 +360,21 @@ class ArborFileManager:
         # make sure the workflow type exists in this project
         self.db.ar_projects.update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'Workflows'}})
 
+    # return a python list filled with character strings 
+    def returnCharacterListFromCharacterMatrix(self,instancename,projectTitle):
+        # for some reaseon, the str() was required to resolve the collection name in mongo
+        collectionName = str(self.prefixString+projectTitle+"_"+"CharacterMatrix"+"_"+instancename)
+        #print 'collection for attribute list is: ',collectionName
+        matrix_collection = self.db[collectionName]        
+        record = matrix_collection.find_one()
+        characterNames = []
+        for key in record.keys():
+            characterNames.append(key)
+        return characterNames
+            
+        
+
+        
+ 
+
+        

@@ -8,18 +8,20 @@ Created on Thu Mar 28 22:15:51 2013
 import os
 import sys
 
-
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from PyQt4 import QtDeclarative
 
-
 global api
+global newAlgorithmControlsDialogInstance
 
 import dialogs
 
 # add calls to manage files for Arbor
 from QtArborFileManager import QtArborFileManager
+
+# add calls to manage files for Arbor
+from QtArborAlgorithmManager import QtArborAlgorithmManager
 
 # global data structures to remember the projects, types, and instances
 projectList = []
@@ -35,6 +37,7 @@ class Form(QDialog):
          
         self.quitbutton = QPushButton("Quit")
         self.title = QLabel("Arbor Project and File Manager")
+        self.title.setAlignment(Qt.AlignCenter) 
         #wf_manager = workflowManager.workflowManager()
         
         self.horiz_splitter = QSplitter()
@@ -67,6 +70,7 @@ class Form(QDialog):
         self.newProjectButton = QPushButton("New Project")
         self.deleteProjectButton = QPushButton("Delete Selected\nProject")
         self.deleteDatasetButton = QPushButton("Delete Selected\nDataset")
+        self.algorithmControlsButton = QPushButton("Run Algorithms on\nCurrent Project")
 
    # add button tow 2
         button_panel2 = QSplitter();
@@ -80,7 +84,8 @@ class Form(QDialog):
         
         button_panel.addWidget(self.newProjectButton)  
         button_panel.addWidget(self.deleteProjectButton)
-        button_panel.addWidget(self.deleteDatasetButton)          
+        button_panel.addWidget(self.deleteDatasetButton)  
+        button_panel.addWidget(self.algorithmControlsButton)        
         button_panel2.addWidget(self.newTreeButton)     
         button_panel2.addWidget(self.newTreeFromOpenTreeButton)
         button_panel2.addWidget(self.newCharacterButton)
@@ -88,6 +93,9 @@ class Form(QDialog):
         button_panel2.addWidget(self.newSequencesButton)
         button_panel2.addWidget(self.newWorkflowButton)
         
+        # emit a single when a project is selected
+        #arbor_project_changed = pyqtSignal(string)
+
         # Create layout and add widgets
         layout = QVBoxLayout()
         layout.addWidget(self.title)
@@ -103,6 +111,7 @@ class Form(QDialog):
         self.newProjectButton.clicked.connect(self.processNewProjectButton)
         self.deleteProjectButton.clicked.connect(self.deleteSelectedProject)
         self.deleteDatasetButton.clicked.connect(self.deleteSelectedDataset)
+        self.algorithmControlsButton.clicked.connect(self.processAlgorithmControlsButton)
         self.newTreeButton.clicked.connect(self.processNewTreeButton)
         self.newTreeFromOpenTreeButton.clicked.connect(self.processNewTreeFromOpenTreeButton)
         self.newCharacterButton.clicked.connect(self.processNewCharacterButton)
@@ -114,7 +123,7 @@ class Form(QDialog):
         self.projectListWidget.itemClicked.connect(self.selectProjectItem)
         # show instances that match the selected datatype
         self.datatypeListWidget.itemClicked.connect(self.selectDataTypeItem)
-        
+       
        
     # Initialize the Geiger module under R 
     def greetings(self):
@@ -138,6 +147,7 @@ class Form(QDialog):
         
     # user selected a particular project, so display the types for this project    
     def selectProjectItem(self):
+        global newAlgorithmControlsDialogInstance
         # test that there is actually something selected
         if (self.projectListWidget.currentItem()):
             # now display the types in this project
@@ -149,7 +159,10 @@ class Form(QDialog):
             self.datatypeListWidget.clear()
             self.datasetListWidget.clear()
             for j in range(0,len(typeListForProject)):
-                self.datatypeListWidget.addItem(typeListForProject[j])
+                self.datatypeListWidget.addItem(typeListForProject[j]) 
+            # tell the algorithm dialog what the current project is
+            dialogs.changeCurrentProject(prname);
+
             
     # user clicked a datatype inside a project.  we want to display all the 
     # instances of this datatype.  If there is nothing selected, then don't fill the instance list
@@ -218,6 +231,9 @@ class Form(QDialog):
 
     def processNewSequencesButton(self):
         dialogs.openNewSequenceDialog()
+        
+    def processAlgorithmControlsButton(self):
+        dialogs.openAlgorithmControlsDialog();
 
 
 if __name__ == '__main__':
@@ -230,11 +246,17 @@ if __name__ == '__main__':
     api = QtArborFileManager()
     api.initDatabaseConnection()
     
+    # initialize the installed algorithm API
+    global algorithms
+    algorithms = QtArborAlgorithmManager()
+    algorithms.setProjectManagerAPI(api)
+    algorithms.initAlgorithmLibrary()
+    
     # Create and show the form
     form = Form()
     # the window opens up really tiny without this, because QML size wasn't set
     #form.setMinimumSize(800,600)
-    dialogs.initializeAllDialogs(api)
+    dialogs.initializeAllDialogs(api,algorithms)
     api.projectListChangedSignal.connect(form.updateProjectList)
     api.datasetListChangedSignal.connect(form.selectDataTypeItem)
     api.datatypeListChangedSignal.connect(form.selectProjectItem)

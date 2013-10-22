@@ -42,7 +42,7 @@ class NewProjectDialog(QDialog):
             
     
     
-def initializeAllDialogs(arborAPI):
+def initializeAllDialogs(arborAPI,algorithms):
     global savedArborAPI
     savedArborAPI = arborAPI
     global newProjectDialogInstance 
@@ -59,6 +59,11 @@ def initializeAllDialogs(arborAPI):
     newWorkflowDialogInstance = NewWorkflowDialog(arborAPI)
     global newOpenTreeOfLifeDialogInstance
     newOpenTreeOfLifeDialogInstance = NewOpenTreeOfLifeDialog(arborAPI)
+    global newAlgorithmControlsDialogInstance
+    newAlgorithmControlsDialogInstance = NewAlgorithmControlsDialog(arborAPI,algorithms)
+    if (arborAPI.getCurrentProject()):
+        newAlgorithmControlsDialogInstance.setCurrentProject(arborAPI.getCurrentProject())
+    
 
     
 def openNewProjectDialog():
@@ -446,3 +451,161 @@ def openNewTreeOfLifeDialog():
     print "open new tree dialog"
     global newOpenTreeOfLifeDialogInstance
     newOpenTreeOfLifeDialogInstance.show()
+    
+    
+     #----------------
+ 
+ 
+# pop up to load a tree from the Open Tree of Life Project
+class NewAlgorithmControlsDialog(QDialog):   
+    # Define the  user interface for a new dialog to be created
+    def __init__(self, ArborAPI,ArborAlgorithmsAPI,parent=None):
+        super(NewAlgorithmControlsDialog, self).__init__(parent)
+        self.api = ArborAPI
+        self.algorithms = ArborAlgorithmsAPI
+        self.currentProjectName = ''
+        self.titleText = QLabel("Run Analyses")
+        
+        self.vert_splitter = QSplitter(Qt.Vertical, self)
+        self.button_splitter = QSplitter(Qt.Vertical,self)
+        self.vert_splitter2 = QSplitter(Qt.Vertical,self)
+        
+        # list the tree instances of data in the project
+        self.treeLabel = QLabel("Select a Tree:")      
+        self.treeLabel.setMaximumHeight(40)
+        self.treeListWidget = QListWidget(self)
+        self.treeListWidget.setObjectName("treeListWidget")
+        
+        # list the character matrix instances of data in the project
+        self.matrixLabel = QLabel("Select a Character Matrix:")
+        self.matrixLabel.setMaximumHeight(40)
+        self.matrixListWidget = QListWidget(self)
+        self.matrixListWidget.setObjectName("matrixListWidget")
+        
+        # list the attribute columns in the current character matrix
+        self.charcterLabel = QLabel("Select a Character:")
+        self.charcterLabel.setMaximumHeight(40)        
+        self.characterListWidget = QListWidget(self)
+        self.characterListWidget.setObjectName("characterListWidget")
+
+      # list the algorithms available
+        self.algorithmLabel = QLabel("Algorithm To Run:")
+        self.algorithmLabel.setMaximumHeight(40)
+        self.algorithmListWidget = QListWidget(self)
+        self.algorithmListWidget.setObjectName("algorithmListWidget")
+    
+        self.confirmationText = QLabel("")
+        self.nameDialog = QLineEdit()
+        self.titleText3 = QLabel("Enter the ouput name to use:")
+        self.titleText3.setMaximumHeight(40)
+        self.outputTreeName = QLineEdit()
+        self.outputTreeName.setMaximumHeight(50)
+        self.cancelButton = QPushButton("Cancel")
+        self.runButton = QPushButton("Run Algorithm")
+        
+        #put up a logo
+        pm = QPixmap("Arbor_128px.png")
+        self.arborLogo = QLabel()
+        self.arborLogo.setPixmap(pm);
+        self.arborLogo.setAlignment(Qt.AlignCenter)
+        
+        # lay out the elements in the dialog panel 
+        self.vert_splitter.addWidget(self.treeLabel)
+        self.vert_splitter.addWidget(self.treeListWidget)
+        self.vert_splitter.addWidget(self.matrixLabel)
+        self.vert_splitter.addWidget(self.matrixListWidget)
+        self.vert_splitter2.addWidget(self.charcterLabel)
+        self.vert_splitter2.addWidget(self.characterListWidget)
+        self.vert_splitter2.addWidget(self.algorithmLabel)
+        self.vert_splitter2.addWidget(self.algorithmListWidget)       
+        self.button_splitter.addWidget(self.arborLogo)
+        self.button_splitter.addWidget(self.titleText3)
+        self.button_splitter.addWidget(self.outputTreeName)
+        self.button_splitter.addWidget(self.runButton)
+        self.button_splitter.addWidget(self.cancelButton)   
+         
+        self.layout = QHBoxLayout()
+        #self.layout.addWidget(self.arborLogo)
+        self.layout.addWidget(self.vert_splitter)
+        self.layout.addWidget(self.vert_splitter2)
+        self.layout.addWidget(self.button_splitter)
+        self.setLayout(self.layout)
+        
+        # connect statements to connect behaviors to events
+        self.cancelButton.clicked.connect(self.closeAlgrorithmControlsDialog)
+        self.runButton.clicked.connect(self.doStuff)
+        self.matrixListWidget.currentItemChanged.connect(self.fillCharacterListWidget)
+        
+    def closeAlgrorithmControlsDialog(self):
+        self.hide()
+        
+    def clearAll(self):
+        self.treeListWidget.clear()
+        self.matrixListWidget.clear()
+        self.characterListWidget.clear()        
+        
+    def loadAlgorithms(self):
+         # get a record from the Arbor datastore and iterate through its headers
+        self.algorithmListWidget.clear()
+        charList = self.algorithms.returnListOfLoadedAlgorithms()
+        for j in range(0,len(charList)):
+            self.algorithmListWidget.addItem(charList[j])
+        
+    def setCurrentProject(self,prname):
+        self.characterListWidget.clear()
+        # fill tree and character matrix lists
+        treeInstances = self.api.getListOfDatasetsByProjectAndType(prname,'PhyloTree')
+        self.currentProjectName = prname;
+        #print "api returned trees: ",treeInstances
+        self.treeListWidget.clear()
+        for j in range(0,len(treeInstances)):
+            self.treeListWidget.addItem(treeInstances[j])
+        matrixInstances = self.api.getListOfDatasetsByProjectAndType(prname,'CharacterMatrix')
+        #print "api returned matrices: ",matrixInstances
+        self.matrixListWidget.clear()
+        for j in range(0,len(matrixInstances)):
+            self.matrixListWidget.addItem(matrixInstances[j])
+
+    # this method finds whih matrix has been selected and list all the columns
+    # to be processed in the cha    
+    def fillCharacterListWidget(self):
+        if (self.matrixListWidget.currentItem()):
+         matrixname = str(self.matrixListWidget.currentItem().text())
+         self.characterListWidget.clear()
+         # get a record from the Arbor datastore and iterate through its headers
+         charList = self.api.returnCharacterListFromCharacterMatrix(
+                             self.matrixListWidget.currentItem().text(),
+                             self.currentProjectName)
+         for j in range(0,len(charList)):
+            self.characterListWidget.addItem(charList[j])
+
+    # the user has invoked run on a selected algorithm, collected the selected datasets and invoke
+    # the algorithm
+
+    def doStuff(self):
+        currenttree = currentmatrix = currentcharacter = ''
+        if (self.algorithmListWidget.currentItem()):
+            algorithmToRun = self.algorithmListWidget.currentItem().text()
+            if (self.treeListWidget.currentItem()):
+                currenttree=self.treeListWidget.currentItem().text()
+            if (self.matrixListWidget.currentItem()):
+                currentmatrix = self.matrixListWidget.currentItem().text()
+            if (self.characterListWidget.currentItem()):                
+                currentcharacter = self.characterListWidget.currentItem().text()
+            # TODO: add checking logic here to make sure appropriate data types are defined for algorithms
+            # before running them.  All algorithms could have a list of data they depend on and it would get checked 
+            self.algorithms.runAlgorithmByName(algorithmToRun,self.currentProjectName,currenttree,currentmatrix,currentcharacter)
+        pass
+#            
+def openAlgorithmControlsDialog():
+    global app
+    print "open algorithm controls "
+    global newAlgorithmControlsDialogInstance
+    newAlgorithmControlsDialogInstance.clearAll()
+    newAlgorithmControlsDialogInstance.loadAlgorithms()
+    newAlgorithmControlsDialogInstance.show()
+    
+# this is defined at the dialogs package level, it invokes changed toany 
+# dialogs that needs to know the project has changed    
+def changeCurrentProject(prname):
+    newAlgorithmControlsDialogInstance.setCurrentProject(prname)
