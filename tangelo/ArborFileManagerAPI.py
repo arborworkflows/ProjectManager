@@ -250,7 +250,19 @@ class ArborFileManager:
             root_phylotree_algorithm.addRootToTree(treeCollection)
             # emit a signal so the GUI knows to update
             self.datatypeListChangedSignal.emit(); 
-            self.datasetListChangedSignal.emit();               
+            self.datasetListChangedSignal.emit(); 
+
+  # add a tree record for exising collection
+    def newTreeInProjectFromExistingCollection(self,treename,projectTitle,description):
+        collectionName = self.prefixString+projectTitle+"_"+"PhyloTree"+"_"+treename
+        print "adding record of tree in collection: ",collectionName
+        # add a tree record entry to the 'PyloTree' array in the project record
+        self.db.ar_projects.update({"name": projectTitle}, { '$push': {u'PhyloTree': {treename:str(description)}}})
+        self.db.ar_projects.update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'PhyloTree'}})
+        # emit a signal so the GUI knows to update
+        self.datatypeListChangedSignal.emit(); 
+        self.datasetListChangedSignal.emit();               
+              
     
     # query from the OpenTreeOfLife.  This routine performs the fetch from OTL,
     # retrieves a newick tree and processes it to load into the Arbor database

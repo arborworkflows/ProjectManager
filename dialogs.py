@@ -496,10 +496,10 @@ class NewAlgorithmControlsDialog(QDialog):
     
         self.confirmationText = QLabel("")
         self.nameDialog = QLineEdit()
-        self.titleText3 = QLabel("Enter the ouput name to use:")
+        self.titleText3 = QLabel("Enter the output name to use:")
         self.titleText3.setMaximumHeight(40)
-        self.outputTreeName = QLineEdit()
-        self.outputTreeName.setMaximumHeight(50)
+        self.outputObjectName = QLineEdit()
+        self.outputObjectName.setMaximumHeight(50)
         self.cancelButton = QPushButton("Cancel")
         self.runButton = QPushButton("Run Algorithm")
         
@@ -520,7 +520,7 @@ class NewAlgorithmControlsDialog(QDialog):
         self.vert_splitter2.addWidget(self.algorithmListWidget)       
         self.button_splitter.addWidget(self.arborLogo)
         self.button_splitter.addWidget(self.titleText3)
-        self.button_splitter.addWidget(self.outputTreeName)
+        self.button_splitter.addWidget(self.outputObjectName)
         self.button_splitter.addWidget(self.runButton)
         self.button_splitter.addWidget(self.cancelButton)   
          
@@ -583,7 +583,7 @@ class NewAlgorithmControlsDialog(QDialog):
     # the algorithm
 
     def doStuff(self):
-        currenttree = currentmatrix = currentcharacter = ''
+        currenttree = currentmatrix = currentcharacter =  outputname = ''
         if (self.algorithmListWidget.currentItem()):
             algorithmToRun = self.algorithmListWidget.currentItem().text()
             if (self.treeListWidget.currentItem()):
@@ -592,16 +592,18 @@ class NewAlgorithmControlsDialog(QDialog):
                 currentmatrix = self.matrixListWidget.currentItem().text()
             if (self.characterListWidget.currentItem()):                
                 currentcharacter = self.characterListWidget.currentItem().text()
+            if (self.outputObjectName.text()):
+                outputname = self.outputObjectName.text()
             # TODO: add checking logic here to make sure appropriate data types are defined for algorithms
             # before running them.  All algorithms could have a list of data they depend on and it would get checked 
-            self.algorithms.runAlgorithmByName(algorithmToRun,self.currentProjectName,currenttree,currentmatrix,currentcharacter)
+            self.algorithms.runAlgorithmByName(algorithmToRun,self.currentProjectName,currenttree,currentmatrix,currentcharacter,outputname)
         pass
 #            
 def openAlgorithmControlsDialog():
     global app
     print "open algorithm controls "
     global newAlgorithmControlsDialogInstance
-    newAlgorithmControlsDialogInstance.clearAll()
+    #newAlgorithmControlsDialogInstance.clearAll()
     newAlgorithmControlsDialogInstance.loadAlgorithms()
     newAlgorithmControlsDialogInstance.show()
     
