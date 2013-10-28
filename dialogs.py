@@ -5,8 +5,12 @@ from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from PyQt4 import QtDeclarative
 
+import sys
+sys.path.append("tangelo")
 
-# define the dialogs designed for the NSF demo in May 2913
+from ArborAlgorithmManagerAPI import ArborAlgorithmManager
+
+# define the dialogs designed to exercise the API 
 class NewProjectDialog(QDialog):   
     # Define the  user interface for a new dialog to be created
     def __init__(self, ArborAPI,parent=None):
@@ -93,7 +97,7 @@ class NewTreeDialog(QDialog):
         self.fileSelector.setNameFilter("PhyloXML files (*.xml)")
         self.selectFileNameNewick = QPushButton("Select Newick file to import")
         self.fileSelectorNewick = QFileDialog()
-        self.fileSelectorNewick.setNameFilter("Newick files (*.phy)")
+        self.fileSelectorNewick.setNameFilter("Newick files (*.*)")
 
         #self.fileSelector.setFileMode(QtGui.QFileDialog.ExistingFile)
         self.cancelButton = QPushButton("Cancel")
@@ -500,7 +504,7 @@ class NewAlgorithmControlsDialog(QDialog):
         self.titleText3.setMaximumHeight(40)
         self.outputObjectName = QLineEdit()
         self.outputObjectName.setMaximumHeight(50)
-        self.cancelButton = QPushButton("Cancel")
+        self.cancelButton = QPushButton("Close Window")
         self.runButton = QPushButton("Run Algorithm")
         
         #put up a logo

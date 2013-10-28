@@ -28,6 +28,8 @@ import csv
 import urllib
 import urllib2
 
+import sys
+sys.path.append("tangelo")
 
 # import the recursive algorithm to process phyloXML records and create a mongo collection
 #import phyloimport_algorithm
@@ -36,6 +38,8 @@ import urllib2
 #import root_phylotree_algorithm
 
 import ArborAlgorithmManagerAPI
+
+import phyloimport_algorithm
 
 # parser routine for PhyloXML
 from Bio import Phylo
