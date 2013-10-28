@@ -41,6 +41,8 @@ import ArborAlgorithmManagerAPI
 
 import phyloimport_algorithm
 
+import root_phylotree_algorithm
+
 # parser routine for PhyloXML
 from Bio import Phylo
 
@@ -229,6 +231,7 @@ class ArborFileManager:
         for tree in trees:
             #process tree
             phyloimport_algorithm.recursive_clade(tree, treeCollection)
+            root_phylotree_algorithm.addRootToTree(treeCollection)
             # add a tree record entry to the 'PyloTree' array in the project record
             self.db.ar_projects.update({"name": projectTitle}, { '$push': {u'PhyloTree': {treename:treefile}}})
             self.db.ar_projects.update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'PhyloTree'}})
