@@ -65,8 +65,8 @@ def initializeAllDialogs(arborAPI,algorithms):
     newOpenTreeOfLifeDialogInstance = NewOpenTreeOfLifeDialog(arborAPI)
     global newAlgorithmControlsDialogInstance
     newAlgorithmControlsDialogInstance = NewAlgorithmControlsDialog(arborAPI,algorithms)
-    if (arborAPI.getCurrentProject()):
-        newAlgorithmControlsDialogInstance.setCurrentProject(arborAPI.getCurrentProject())
+    if (arborAPI.getCurrentProjectName()):
+        newAlgorithmControlsDialogInstance.setCurrentProjectName(arborAPI.getCurrentProjectName())
     
 
     
@@ -141,15 +141,15 @@ class NewTreeDialog(QDialog):
         nameForTree = str(self.nameDialog.text())
         print "create new tree from file: ",self.savedTreeFilename
         print "name for the tree is: ",nameForTree
-        print "default project for tree is: ", self.api.getCurrentProject()
+        print "default project for tree is: ", self.api.getCurrentProjectName()
         # need to convert from PyQt4.QtCore.QString to Python string
         #projectTitle = str(projectTitleAsQstring)
         # if valid names are entered, then create the tree record 
-        if len(self.savedTreeFilename)>0 and len(self.api.getCurrentProject())>0:
+        if len(self.savedTreeFilename)>0 and len(self.api.getCurrentProjectName())>0:
             print "adding a tree entitled: ",self.savedTreeFilename
             self.hide()
 #            # create project record in the database
-            self.api.newTreeInProject(nameForTree, self.savedTreeFilename, self.api.getCurrentProject(),self.treeType)
+            self.api.newTreeInProject(nameForTree, self.savedTreeFilename, self.api.getCurrentProjectName(),self.treeType)
 #            
 def openNewTreeDialog():
     global app
@@ -202,13 +202,13 @@ class NewCharacterDialog(QDialog):
         nameForInstance = str(self.nameDialog.text())
         print "create new character matrix from file: ",self.savedFilename
         print "name for the tree is: ",nameForInstance
-        print "default project for matrix is: ", self.api.getCurrentProject()
+        print "default project for matrix is: ", self.api.getCurrentProjectName()
         # if valid names are entered, then create the character record 
-        if len(self.savedFilename)>0 and len(self.api.getCurrentProject())>0:
+        if len(self.savedFilename)>0 and len(self.api.getCurrentProjectName())>0:
             print "adding a tree entitled: ",self.savedFilename
             self.hide()
 #            # create project record in the database
-            self.api.newCharacterMatrixInProject(nameForInstance, self.savedFilename, self.api.getCurrentProject())
+            self.api.newCharacterMatrixInProject(nameForInstance, self.savedFilename, self.api.getCurrentProjectName())
 #            
 def openNewCharacterDialog():
     global app
@@ -263,13 +263,13 @@ class NewOccurrenceDialog(QDialog):
         nameForInstance = str(self.nameDialog.text())
         print "create new occurrence records from file: ",self.savedFilename
         print "name for the occurrence set is: ",nameForInstance
-        print "default project for occurrence is: ", self.api.getCurrentProject()
+        print "default project for occurrence is: ", self.api.getCurrentProjectName()
         # if valid names are entered, then create the character record 
-        if len(self.savedFilename)>0 and len(self.api.getCurrentProject())>0:
+        if len(self.savedFilename)>0 and len(self.api.getCurrentProjectName())>0:
             print "adding occurrences entitled: ",self.savedFilename
             self.hide()
 #            # create project record in the database
-            self.api.newOccurrencesInProject(nameForInstance, self.savedFilename, self.api.getCurrentProject())
+            self.api.newOccurrencesInProject(nameForInstance, self.savedFilename, self.api.getCurrentProjectName())
 #            
 def openNewOccurrencesDialog():
     global app
@@ -327,13 +327,13 @@ class NewSequenceDialog(QDialog):
         nameForInstance = str(self.nameDialog.text())
         print "create new sequence records from file: ",self.savedFilename
         print "name for the sequence set is: ",nameForInstance
-        print "default project for sequence is: ", self.api.getCurrentProject()
+        print "default project for sequence is: ", self.api.getCurrentProjectName()
         # if valid names are entered, then create the character record 
-        if len(self.savedFilename)>0 and len(self.api.getCurrentProject())>0:
+        if len(self.savedFilename)>0 and len(self.api.getCurrentProjectName())>0:
             print "adding sequence entitled: ",self.savedFilename
             self.hide()
 #            # create project record in the database
-            self.api.newSequencesInProject(nameForInstance, self.savedFilename, self.api.getCurrentProject())
+            self.api.newSequencesInProject(nameForInstance, self.savedFilename, self.api.getCurrentProjectName())
 #            
 def openNewSequenceDialog():
     global app
@@ -390,13 +390,13 @@ class NewWorkflowDialog(QDialog):
         nameForInstance = str(self.nameDialog.text())
         print "create new sequence records from file: ",self.savedFilename
         print "name for the sequence set is: ",nameForInstance
-        print "default project for sequence is: ", self.api.getCurrentProject()
+        print "default project for sequence is: ", self.api.getCurrentProjectName()
         # if valid names are entered, then create the character record 
-        if len(self.savedFilename)>0 and len(self.api.getCurrentProject())>0:
+        if len(self.savedFilename)>0 and len(self.api.getCurrentProjectName())>0:
             print "adding sequence entitled: ",self.savedFilename
             self.hide()
 #            # create project record in the database
-            self.api.newWorkflowInProject(nameForInstance, self.savedFilename, self.api.getCurrentProject())
+            self.api.newWorkflowInProject(nameForInstance, self.savedFilename, self.api.getCurrentProjectName())
 #            
 def openNewWorkflowDialog():
     global app
@@ -441,14 +441,14 @@ class NewOpenTreeOfLifeDialog(QDialog):
         nameForTree = str(self.nameDialog.text())
         print "query OpenTreeOfLife from ottolID: ",self.ottolidDialog.text()
         print "name for the tree is: ",nameForTree
-        print "default project for tree is: ", self.api.getCurrentProject()
+        print "default project for tree is: ", self.api.getCurrentProjectName()
         # need to convert from PyQt4.QtCore.QString to Python string
         #projectTitle = str(projectTitleAsQstring)
         # if valid names are entered, then create the tree record 
-        if len(self.api.getCurrentProject())>0:
+        if len(self.api.getCurrentProjectName())>0:
             self.hide()
 #           # create project record in the database
-            self.api.newTreeFromOpenTreeOfLife(nameForTree, self.ottolidDialog.text(), self.api.getCurrentProject())
+            self.api.newTreeFromOpenTreeOfLife(nameForTree, self.ottolidDialog.text(), self.api.getCurrentProjectName())
 #            
 def openNewTreeOfLifeDialog():
     global app
@@ -555,7 +555,7 @@ class NewAlgorithmControlsDialog(QDialog):
         for j in range(0,len(charList)):
             self.algorithmListWidget.addItem(charList[j])
         
-    def setCurrentProject(self,prname):
+    def setCurrentProjectName(self,prname):
         self.characterListWidget.clear()
         # fill tree and character matrix lists
         treeInstances = self.api.getListOfDatasetsByProjectAndType(prname,'PhyloTree')
@@ -614,4 +614,4 @@ def openAlgorithmControlsDialog():
 # this is defined at the dialogs package level, it invokes changed toany 
 # dialogs that needs to know the project has changed    
 def changeCurrentProject(prname):
-    newAlgorithmControlsDialogInstance.setCurrentProject(prname)
+    newAlgorithmControlsDialogInstance.setCurrentProjectName(prname)

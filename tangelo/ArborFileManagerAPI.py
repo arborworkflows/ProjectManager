@@ -119,10 +119,10 @@ class ArborFileManager:
                 newlist.append( projectlist[i][u'name'])
         return newlist
 
-    def setCurrentProject(self,prname):
+    def setCurrentProjectName(self,prname):
         print "api: setting curren project to: ",prname
         self.currentProjectName = prname
-    def getCurrentProject(self):
+    def getCurrentProjectName(self):
         return self.currentProjectName
 
    # look in the database and return a list of the datatypes allowed by a
