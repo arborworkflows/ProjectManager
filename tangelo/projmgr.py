@@ -1,4 +1,6 @@
 import tangelo
+import pymongo
+import bson.json_util
 
 from ArborFileManagerAPI import ArborFileManager
 api = ArborFileManager()
@@ -21,6 +23,12 @@ def get(*pargs, **query_args):
             project = pargs[1]
             datatype = pargs[2]
             return api.getListOfDatasetsByProjectAndType(project, datatype)
+        elif len(pargs) == 4:
+            project = pargs[1]
+            datatype = pargs[2]
+            dataset = pargs[3]
+            coll = api.db[api.returnCollectionForObjectByName(project, datatype, dataset)]
+            return bson.json_util.dumps(list(coll.find()))
         else:
             return tangelo.HTTPStatusCode(400, "Bad request - got %d parameter(s), was expecting between 1 and 3")
     else:
