@@ -240,6 +240,7 @@ class ArborFileManager:
     def newTreeInProjectFromString(self,treename,treestring,projectTitle, description,treetype):
         collectionName = self.prefixString+projectTitle+"_"+"PhyloTree"+"_"+treename
         treeCollection = self.db[collectionName]
+        treeCollection.drop()
         print "uploading tree to collection: ",collectionName
         print "treetype is: ",treetype
         # create the new collection in mongo for this tree.  The tree is encoded 
