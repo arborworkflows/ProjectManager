@@ -243,6 +243,12 @@ class ArborFileManager:
         treeCollection.drop()
         print "uploading tree to collection: ",collectionName
         print "treetype is: ",treetype
+
+        # if the project does not exist, create it
+        projectCollectionName = self.prefixString + 'projects'
+        if self.db[projectCollectionName].find_one({"name": projectTitle}) == None:
+            self.newProject(projectTitle)
+
         # create the new collection in mongo for this tree.  The tree is encoded 
         # in a string, so it needs to be processed slightly different than from a file
         from StringIO import StringIO
