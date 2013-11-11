@@ -29,8 +29,14 @@ def get(*pargs, **query_args):
             dataset = pargs[3]
             coll = api.db[api.returnCollectionForObjectByName(project, datatype, dataset)]
             return bson.json_util.dumps(list(coll.find()))
+        elif len(pargs) == 5:
+            project = pargs[1]
+            datatype = pargs[2]
+            dataset = pargs[3]
+            stringFormat = pargs[4]
+            return api.getDatasetAsTextString(project, datatype, dataset, stringFormat)
         else:
-            return tangelo.HTTPStatusCode(400, "Bad request - got %d parameter(s), was expecting between 1 and 3")
+            return tangelo.HTTPStatusCode(400, "Bad request - got %d parameter(s), was expecting between 1 and 5")
     else:
         return tangelo.HTTPStatusCode(400, "Bad resource type '%s' - allowed types are: %s" % (resource_type, ", ".join(allowed)))
 

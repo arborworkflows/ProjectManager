@@ -40,6 +40,7 @@ sys.path.append("tangelo")
 import ArborAlgorithmManagerAPI
 
 import phyloimport_algorithm
+import phyloexport_algorithm
 
 import root_phylotree_algorithm
 
@@ -167,8 +168,23 @@ class ArborFileManager:
     # we might change the naming algorithm later, so lets use this method to lookup the names
     def returnCollectionForObjectByName(self,projectName,datatypeName, datasetName):
         collectionName = self.prefixString+projectName+"_"+datatypeName+"_"+datasetName
-        return collectionName;
+        return collectionName
         
+    # Convert dataset to a text string
+    def getDatasetAsTextString(self,projectName,datatypeName, datasetName,stringFormat):
+        collectionName = self.returnCollectionForObjectByName(projectName,datatypeName, datasetName)
+        datasetCollection = self.db[collectionName]
+        if (datatypeName == "PhyloTree"):
+          treeCollection = datasetCollection
+          if (stringFormat == "Newick" or stringFormat == "newick"):
+             outputString = phyloexport_algorithm.convertTreeToNewickString(treeCollection)
+          elif (stringFormat == "PhyloXML" or stringFormat =="phyloxml"):
+             print " to be implemented"
+        elif (datatypeName == "CharacterMatrix"):
+           print "to be implemented"
+
+        return outputString
+
      # find and remove a dataset instance
     def deleteDataset(self,projectName,datatypeName, datasetName):
         print "removing dataset from project named: ",projectName
@@ -206,13 +222,13 @@ class ArborFileManager:
         # pick the 'result' field from the query
         newlist = []
         project = self.db.ar_projects.find_one({"name" : projectName})
-        print "found project record: ", project
+        #print "found project record: ", project
         # some projects may not have dataypes yet, true during initial development at least
         if u'datatypes' in project:
             projecttypes = project[u'datatypes']
             if typeName in projecttypes:
                 listOfInstances = project[typeName]
-                print "found instances: ",listOfInstances
+                #print "found instances: ",listOfInstances
                 for j in range(0,len(listOfInstances)):
                     newlist.append(listOfInstances[j].keys()[0])
         return newlist
@@ -398,9 +414,9 @@ class ArborFileManager:
             characterNames.append(key)
         return characterNames
             
-        
 
-        
+
+       
  
 
         
