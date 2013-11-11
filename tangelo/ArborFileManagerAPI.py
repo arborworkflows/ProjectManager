@@ -169,9 +169,10 @@ class ArborFileManager:
     def returnCollectionForObjectByName(self,projectName,datatypeName, datasetName):
         collectionName = self.prefixString+projectName+"_"+datatypeName+"_"+datasetName
         return collectionName
-        
+
     # Convert dataset to a text string
     def getDatasetAsTextString(self,projectName,datatypeName, datasetName,stringFormat):
+        outputString = None
         collectionName = self.returnCollectionForObjectByName(projectName,datatypeName, datasetName)
         datasetCollection = self.db[collectionName]
         if (datatypeName == "PhyloTree"):
@@ -179,7 +180,9 @@ class ArborFileManager:
           if (stringFormat == "Newick" or stringFormat == "newick"):
              outputString = phyloexport_algorithm.convertTreeToNewickString(treeCollection)
           elif (stringFormat == "PhyloXML" or stringFormat =="phyloxml"):
-             print " to be implemented"
+             print "to be implemented"
+          else:
+             print "unrecognized format ", stringFormat
         elif (datatypeName == "CharacterMatrix"):
            print "to be implemented"
 
