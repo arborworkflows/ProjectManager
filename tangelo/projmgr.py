@@ -34,7 +34,8 @@ def get(*pargs, **query_args):
             datatype = pargs[2]
             dataset = pargs[3]
             stringFormat = pargs[4]
-            return api.getDatasetAsTextString(project, datatype, dataset, stringFormat)
+            string =  api.getDatasetAsTextString(project, datatype, dataset, stringFormat)
+            return bson.json_util.dumps(string)
         else:
             return tangelo.HTTPStatusCode(400, "Bad request - got %d parameter(s), was expecting between 1 and 5")
     else:
