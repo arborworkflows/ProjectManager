@@ -35,7 +35,7 @@ def get(*pargs, **query_args):
             dataset = pargs[3]
             stringFormat = pargs[4]
             string =  api.getDatasetAsTextString(project, datatype, dataset, stringFormat)
-            return bson.json_util.dumps(string)
+            return string
         else:
             return tangelo.HTTPStatusCode(400, "Bad request - got %d parameter(s), was expecting between 1 and 5")
     else:
@@ -61,7 +61,10 @@ def put(resource, projname, datasetname=None, data=None, filename=None, filetype
         if datasetname is None:
             return tangelo.HTTPStatusCode(400, "Missing argument 'datasetname'")
 
-        api.newTreeInProjectFromString(datasetname, data, projname, filename, filetype)
+        if filetype == "newick" or filetype == "phyloxml":
+            api.newTreeInProjectFromString(datasetname, data, projname, filename, filetype)
+        if filetype == "csv":
+            api.newCharacterMatrixInProjectFromString(datasetname, data, projname, filename)
 
     return "OK"
 

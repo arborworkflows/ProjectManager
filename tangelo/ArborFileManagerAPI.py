@@ -184,7 +184,10 @@ class ArborFileManager:
           else:
              print "unrecognized format ", stringFormat
         elif (datatypeName == "CharacterMatrix"):
-           print "to be implemented"
+          if (stringFormat == "CSV" or stringFormat == "csv"):
+             outputString = phyloexport_algorithm.convertTableToCSVString(datasetCollection)
+          else:
+             print "unrecognized format ", stringFormat
 
         return outputString
 
@@ -255,7 +258,7 @@ class ArborFileManager:
             self.db.ar_projects.update({"name": projectTitle}, { '$push': {u'PhyloTree': {treename:treefile}}})
             self.db.ar_projects.update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'PhyloTree'}})
 
-   # add a tree to the project
+    # add a tree to the project
     def newTreeInProjectFromString(self,treename,treestring,projectTitle, description,treetype):
         collectionName = self.prefixString+projectTitle+"_"+"PhyloTree"+"_"+treename
         treeCollection = self.db[collectionName]
@@ -339,9 +342,40 @@ class ArborFileManager:
                         characterEntry[header[colnum]] = columntitle
                         # now insert the dictonary as a single entry in the collection
                     newCollection.insert(characterEntry)
+                    rownum = rownum+1
+                    print rownum
 
         # add a  matrix record entry to the 'CharacterMatrix' array in the project record
         self.db.ar_projects.update({"name": projectTitle}, { '$push': {u'CharacterMatrix': {instancename:filename}}})
+        # make sure the character type exists in this project
+        self.db.ar_projects.update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'CharacterMatrix'}})
+
+    # add a character matrix to the project
+    def newCharacterMatrixInProjectFromString(self, datasetname, data, projectTitle, filename):
+        collectionName = self.prefixString+projectTitle+"_"+"CharacterMatrix"+"_"+datasetname
+        newCollection = self.db[collectionName]
+        print "uploading characters to collection: ",collectionName
+
+        # create the new collection in mongo for this table
+        lines = data.splitlines(True)
+        rownum = 0
+        for row in csv.reader(lines):
+            if rownum == 0:
+                header = row
+                print "header row: ",header
+                rownum = rownum+1
+            else:
+                characterEntry = dict()
+                for colnum,columntitle in enumerate(row):
+                    print "column: ",colnum, " title: ",columntitle
+                    # add each attribute name and value as an entry in the dict
+                    characterEntry[header[colnum]] = columntitle
+                    # now insert the dictonary as a single entry in the collection
+                newCollection.insert(characterEntry)
+                rownum = rownum+1
+
+        # add a matrix record entry to the 'CharacterMatrix' array in the project record
+        self.db.ar_projects.update({"name": projectTitle}, { '$push': {u'CharacterMatrix': {datasetname:filename}}})
         # make sure the character type exists in this project
         self.db.ar_projects.update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'CharacterMatrix'}})
 
