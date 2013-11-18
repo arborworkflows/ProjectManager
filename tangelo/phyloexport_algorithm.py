@@ -41,9 +41,14 @@ def convertTreeToNewickString(tree_coll):
     return string
 
 def convertTableToCSVString(table_coll):
-    # create the header row
+    # create the header row.  If it contains a "name" field,
+    # then ensure that this appears first.
     first_row = table_coll.find_one()
-    string = "name,"
+    hasNames = False
+    string = ""
+    if "name" in first_row.keys():
+        string = "name,"
+        hasNames = True
     for key in first_row.iterkeys():
         if key == "_id" or key == "name":
             continue
@@ -53,8 +58,9 @@ def convertTableToCSVString(table_coll):
 
     # create the contents rows
     for row in table_coll.find():
-        string += row["name"]
-        string += ","
+        if hasNames:
+            string += row["name"]
+            string += ","
         for key, value in row.iteritems():
             if key == "_id" or key == "name":
                 continue
