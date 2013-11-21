@@ -33,8 +33,8 @@ def recursiveHelper(node,data_coll):
             else:
                 newName = subtree_info[1]
 			
-	    phylo['scientific_name'] = newName;
-	    data_coll.update({'_id': node},{'$set': {'scientific_name': newName}})
+	    phylo['name'] = newName;
+	    data_coll.update({'_id': node},{'$set': {'name': newName}})
 	    del phylo['_id']
             # see above (SZ)
             if len(subtree_info) > 2:
@@ -58,15 +58,15 @@ def recursiveHelper(node,data_coll):
 	else:
 	    rightmost_child = right_subtree_info[2]
 	newName = leftmost_child + ':' + rightmost_child
-	phylo['scientific_name'] = newName;
-	data_coll.update({'_id': node},{'$set': {'scientific_name': newName}})
+	phylo['name'] = newName;
+	data_coll.update({'_id': node},{'$set': {'name': newName}})
 	print 'updating stuff'
 	del phylo['_id']
 	return [phylo, leftmost_child, rightmost_child]
     
     # leaf, so set scientific name as display name.
-    leaf_name = phylo['taxonomies'][0]['scientific_name']
-    phylo['display_name'] = leaf_name;
+    leaf_name = phylo['name']
+    phylo['name'] = leaf_name;
     data_coll.update({'_id': node},{'$set': {'display_name': leaf_name}})
     del phylo['_id']
     return [phylo, leaf_name]

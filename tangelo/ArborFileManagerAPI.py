@@ -49,7 +49,28 @@ from Bio import Phylo
 # parser routine for fasta files & sequences
 from Bio import SeqIO
 
-    
+ 
+# look at a sting and if it is a floating point number, convert its type to avoid saving "0.345" when 
+# we really want to save 0.345.  We have two tests in sequence so integer values can be returned as ints instead of floats
+
+#def convertIfNumber(s):
+#    try:
+#        float(s)
+#        return float(s)
+#    except ValueError:
+#        return s
+        
+def convertIfNumber(s):
+    try:
+        int(s)
+        return int(s)
+    except ValueError:
+        try:
+            float(s)
+            return float(s)
+        except ValueError:
+            return s        
+            
 class ArborFileManager:    
     
     def __init__(self):
@@ -285,6 +306,8 @@ class ArborFileManager:
         otltreeAsJson = json.loads(tree_page)
         self.newTreeInProjectFromString(treename,otltreeAsJson["tree"],projectTitle,ottolid,"newick")
 
+
+            
     # add a character matrix to the project
     def newCharacterMatrixInProject(self,instancename,filename,projectTitle):
         collectionName = self.prefixString+projectTitle+"_"+"CharacterMatrix"+"_"+instancename
@@ -308,9 +331,9 @@ class ArborFileManager:
                 else:
                     characterEntry = dict()
                     for colnum,columntitle in enumerate(row):
-                        print "column: ",colnum, " title: ",columntitle
+                        #print "column: ",colnum, " title: ",columntitle
                         # add each attribute name and value as an entry in the dict
-                        characterEntry[header[colnum]] = columntitle
+                        characterEntry[header[colnum]] = convertIfNumber(columntitle)
                         # now insert the dictonary as a single entry in the collection
                     newCollection.insert(characterEntry)
 

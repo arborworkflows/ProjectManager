@@ -10,6 +10,20 @@ sys.path.append("tangelo")
 
 from ArborAlgorithmManagerAPI import ArborAlgorithmManager
 
+
+
+# test to see if a variable can be expressed as a continous numeric value. This
+# test is used when displaying the character names, so the user knows if they are 
+# continuous or discrete characters
+
+def isContinuous(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
+            
+            
 # define the dialogs designed to exercise the API 
 class NewProjectDialog(QDialog):   
     # Define the  user interface for a new dialog to be created
@@ -505,7 +519,7 @@ class NewAlgorithmControlsDialog(QDialog):
         self.outputObjectName = QLineEdit()
         self.outputObjectName.setMaximumHeight(50)
         self.cancelButton = QPushButton("Close Window")
-        self.runButton = QPushButton("Run Algorithm")
+        self.runButton = QPushButton("Run Tree/Matrix \n  Algorithm")
         
         #put up a logo
         pm = QPixmap("Arbor_128px.png")
@@ -580,8 +594,15 @@ class NewAlgorithmControlsDialog(QDialog):
          charList = self.api.returnCharacterListFromCharacterMatrix(
                              self.matrixListWidget.currentItem().text(),
                              self.currentProjectName)
+         # now fill the display widget with the characters, indicating their continuous or discrete nature
+         # by listing them one per line with the proper type indicated
          for j in range(0,len(charList)):
-            self.characterListWidget.addItem(charList[j])
+            #if isContinuous(charList[j]):
+            #    charentry = "Continuous: "+charList[j]
+            #else:
+            #    charentry = "Discrete:   "+charList[j]
+            charentry = charList[j]
+            self.characterListWidget.addItem(charentry)
 
     # the user has invoked run on a selected algorithm, collected the selected datasets and invoke
     # the algorithm
