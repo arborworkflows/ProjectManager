@@ -332,7 +332,8 @@ class ArborFileManager:
                     characterEntry = dict()
                     for colnum,columntitle in enumerate(row):
                         #print "column: ",colnum, " title: ",columntitle
-                        # add each attribute name and value as an entry in the dict
+                        # add each attribute name and value as an entry in the dict. 
+                        # this fixes the error where all attribute values were strings. 
                         characterEntry[header[colnum]] = convertIfNumber(columntitle)
                         # now insert the dictonary as a single entry in the collection
                     newCollection.insert(characterEntry)
