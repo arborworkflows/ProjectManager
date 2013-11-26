@@ -80,7 +80,6 @@ class Form(QDialog):
         self.newObservationsButton = QPushButton("Load Occurrences")
         self.newSequencesButton = QPushButton("Load Sequences")
         self.newWorkflowButton = QPushButton("Load Workflow")
-
         
         button_panel.addWidget(self.newProjectButton)  
         button_panel.addWidget(self.deleteProjectButton)

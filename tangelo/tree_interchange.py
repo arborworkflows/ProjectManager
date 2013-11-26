@@ -1,5 +1,15 @@
 # -*- coding: utf-8 -*-
+"""
+Created on Sun Nov 24 08:16:45 2013
 
+@author: clisle
+"""
+
+"""
+This module provides routines for interchanging phylo trees between  APE (in R) 
+and Arbor's TreeStore (noSQL-based) storage.
+
+"""
 import pymongo
 from pymongo import Connection
 from bson import ObjectId
@@ -193,7 +203,8 @@ def ConvertArborTreeIntoApe(tree_coll,apeTreeName):
     else:
         print 'Search returned more zere or more than one object. Number of objects: ', results.count()
     
-    
+
+
 def ConvertArborCharacterMatrixIntoDataFrame(data_coll,matrix_name):      
     # query the whole collection to get a document for each row in the character matrix
     char_query = {}
@@ -220,79 +231,151 @@ def ConvertArborCharacterMatrixIntoDataFrame(data_coll,matrix_name):
     #print (matrix_name)
     return str(matrix_name)
    
-   
-def InvokePicantePhyloSignal(tree_collection_name,tree_coll,matrix_collection_name,matrix_coll, character,verbose):
-    # first convert tree to an APE tree
-    ape_tree_in_R = ConvertArborTreeIntoApe(tree_coll,tree_collection_name)
-    # then convert the character matrix in a data.frame in R
-    char_matrix_in_R = ConvertArborCharacterMatrixIntoDataFrame(matrix_coll,matrix_collection_name)
-    
-    # get the shortcut for the r interpreter
-    r = robjects.r
-    
-    # phylosignal is defined in the picante library
-    r('library(picante)')
 
-    # set the row names of the table to be indexed by the 'species' attribute
-    commandstr = 'row.names('+char_matrix_in_R+') <- '+ char_matrix_in_R +'$species'
-    if verbose:
-        print  "commandstr:",commandstr
-    r(commandstr)
+#  *********************************************
+#  **** converting from APE to Arbor below *****
+#  *********************************************
 
-    #commandstr = 'svl<- ' + char_matrix_in_R +'["SVL"]'
-    commandstr = 'selectedchar<- ' + char_matrix_in_R +'["'+character+'"]'
-    if verbose:
-        print "commandstr:",commandstr
-    r(commandstr)
+def printApeTree(apeTree):
+    print "print overall apeTree:"
+    print apeTree
+    print "[0]:",apeTree[0]
+    print "[1]:",apeTree[1]
+    print "[2]:",apeTree[2]
+    print "[3]:",apeTree[3]
     
-    if verbose:
-        print "character table to test for phylosignal:"
-        r('str(selectedchar)')
-    
-    #r('svl_named <- as.numeric(svl$SVL)')
-    commandstr = 'selectedchar_named <- as.numeric(selectedchar$'+character+')'
-    if verbose:
-        print commandstr
-    r(commandstr)
-    r('names(selectedchar_named) <- rownames(selectedchar)')
+# lookup taxa by name so we don't get the nodes scrambled in the APE tree
+def returnNodeNameFromIndex(apeTree,index):
+    if (len(apeTree[1])==1):
+        leafIndex = 2
+        countIndex = 1
+    else:
+        #print "alternative ape tree compondent order case"
+        leafIndex = 1
+        countIndex = 2
+    leafCount = len(apeTree[leafIndex])
+    #print "lookup for index:",index
+    if index<leafCount+1:
+        # node is a taxon, return the species name
+        nodeName = apeTree[leafIndex][index-1]
+    else:
+        nodeName = 'node'+str(index)
+    return nodeName
 
-    # now we can test for signal
-    #res1<-phylosignal(svl, anoleTree)
-   
-    #r('save('+ape_tree_in_R+',file="apetree")')
-    #r('save('+char_matrix_in_R+',file="apematrix")')
-    #commandstr = 'res1<-phylosignal(svl_named,phy='+ ape_tree_in_R +')'
-   
-    commandstr = 'res1<-phylosignal(selectedchar_named,phy='+ ape_tree_in_R +')'
-    if verbose:
-        print "commandstr:",commandstr
-    r(commandstr)
-    
-    # the IMPORTANT PARTS of this output are:
-    #res1$K # the value of the test statistic
-    #res1$PIC.variance.P # the P value
-    
-    r('print(res1$K)')
-    
-    
-    
+    # sometimes the tuples in phylo class instance are re-orderered.  the transformed tree seems to have the order:
+    #[0]=edges, [1]=tiplabels, [2]=internalNodeCount, [3]= branchlengths, which has [1] and [2] switched
+    #from the definition.  We will look and switch them if necessary
 
-def CalculatePhylogeneticSignalBySeparateConnection(system,database,port,tree_collection_name,matrix_collection_name,character, verbose):
-   
-    connection = Connection(system, port)
-    db = connection[database]    
-    tree_coll = db[str(tree_collection_name)]
-    matrix_coll = db[str(matrix_collection_name)]
+def addApeTreeNodesIntoTreeStore(apeTree,data_coll):
+    if (len(apeTree[1])==1):
+        leafIndex = 2
+        countIndex = 1
+    else:
+        #print "alternative ape tree compondent order case"
+        leafIndex = 1
+        countIndex = 2
+    # calculate how many nodes are here
+    leafCount = len(apeTree[leafIndex])
+    #printApeTree(apeTree)
+    print "apeTree[countIndex]:",apeTree[countIndex]
+    print "apeTree[countIndex][0]:",apeTree[countIndex][0]
+    totalNodes = leafCount + int(apeTree[countIndex][0])
+    # loop through the nodes and create a document for each one
+    for index in range(1,totalNodes+1):
+        node = dict()
+        node['name'] = returnNodeNameFromIndex(apeTree,index)
+        if index>leafCount:
+            # node is not a taxon, so add an empty clade array
+            node['clades'] = []
+        data_coll.insert(node)
+        
+# traverse the edges of an apeTree and add the connectivity from the apeTree into the
+# mongo collection representing the tree.  This method assumes the nodes have  been added previously.
+        
+def addApeTreeEdgesIntoTreeStore(apeTree,data_coll):
+    # go through the edge table and add fields to the nodes in the collection
+    edgeCount = len(apeTree[0])/2
+    print "found edge count to be: ",edgeCount
+    #print "edges:",apeTree[3]
+    for edgeIndex in range(0,edgeCount):
+        startNodeIndex = int(apeTree[0][edgeIndex])
+        endNodeIndex = int(apeTree[0][edgeCount+edgeIndex])
+        startNodeQuery = {'name': returnNodeNameFromIndex(apeTree,startNodeIndex)}
+        endNodeQuery = {'name': returnNodeNameFromIndex(apeTree,endNodeIndex)}
+        startNode = data_coll.find_one(startNodeQuery)
+        endNode = data_coll.find_one(endNodeQuery)
+        #print "edgeIndex: ",edgeIndex,"endnode:  ", endNode
+        # add branch length to end node
+        try:
+            endNode['branch_length'] = apeTree[3][edgeIndex]
+        except TypeError:
+            print "error on edgeIndex or no branchlength:",edgeIndex
+            
+        #print "edgeIndex: ",edgeIndex,"endnode:  ", endNode
+        data_coll.update(endNodeQuery,endNode)
+        # add edge leaving start node and going to endnode
+        startNode['clades'].append(endNode['_id'])
+        data_coll.update(startNodeQuery,startNode)
 
-    # startup up an R interpreter to do the processing.  We will be converting a tree, so create a tree handler
-    robjects.r("library('geiger')")
-    r = robjects.r
-    r('source("/Users/clisle/Projects/Arbor/code/python-R-integration/arbor2apeTreeHandler.R")')
-    r('treeHandler = new("arbor2apeTreeHandler")')
+# The Arbor treestore already has all its tree nodes, find the root of the tree and add 
+# a handle node into the collection pointing to the root node.
 
+def addHandleNodeIntoTreeStore(apeTree,data_coll):
+    if (len(apeTree[1])==1):
+        leafIndex = 2
+        countIndex = 1
+    else:
+        #print "alternative ape tree compondent order case"
+        leafIndex = 1
+        countIndex = 2    
+    leafCount = len(apeTree[leafIndex])
+    # add the 'handle node' to the collection.  Find the root of the dataset by getting the node immediately after the last leaf
+    rootNodeQuery = {'name': returnNodeNameFromIndex(apeTree,leafCount+1)}
+    rootNode = data_coll.find_one(rootNodeQuery)
+    handlenode = dict()
+    #handlenode['name'] = ''
+    handlenode['rooted'] = True
+    handlenode['clades'] =  []
+    handlenode['clades'].append(rootNode['_id'])
+    data_coll.insert(handlenode)
+
+# this erases the name attributes on internal nodes of the tree.  Names for taxon nodes are not affected
+
+def clearInternalNodeNames(apeTree,data_coll):
+    if (len(apeTree[1])==1):
+        leafIndex = 2
+        countIndex = 1
+    else:
+        print "alternative ape tree compondent order case"
+        leafIndex = 1
+        countIndex = 2    
+    leafCount = len(apeTree[leafIndex])
+    totalNodes = leafCount + int(apeTree[countIndex][0])
+    for index in range(1,totalNodes+1):   
+        if index>leafCount:
+            # node is not a taxon, so remove its name entry
+            nodeQuery = {'name': returnNodeNameFromIndex(apeTree,index)}
+            internalNode = data_coll.find_one(nodeQuery)
+            if 'name' in internalNode:
+                del internalNode['name']
+            data_coll.update(nodeQuery,internalNode)
     
-    result = InvokePicantePhyloSignal(tree_collection_name, tree_coll, matrix_collection_name,matrix_coll, character,verbose)
-    if (connection):
-        connection.close()
-    return result
+# perform the steps that transform an apeTree (passed through the parameter variable) into
+# a document collection stored in the Arbor TreeStore.  The steps are: (1)Nodes are created, (2) edges added,
+# (3) handled node is created in the collection, and (4) names are erased for hierarchical nodes
+    
+def importApeTreeToArbor(apeTree,data_coll):  
+    data_coll.drop()
+    global global_next_node
+    global global_next_edge
+    global global_leafname_list
+    global_next_node = 0
+    global_next_edge = 0
+    global_leafname_list = []
+    addApeTreeNodesIntoTreeStore(apeTree,data_coll)
+    addApeTreeEdgesIntoTreeStore(apeTree,data_coll)
+    addHandleNodeIntoTreeStore(apeTree,data_coll)
+    clearInternalNodeNames(apeTree,data_coll)
+    
+      
     

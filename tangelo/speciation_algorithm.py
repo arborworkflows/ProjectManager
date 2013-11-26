@@ -221,63 +221,47 @@ def ConvertArborCharacterMatrixIntoDataFrame(data_coll,matrix_name):
     return str(matrix_name)
    
    
-def InvokePicantePhyloSignal(tree_collection_name,tree_coll,matrix_collection_name,matrix_coll, character,verbose):
+def InvokeSpeciation(tree_collection_name,tree_coll,matrix_collection_name,matrix_coll, character,verbose):
+
     # first convert tree to an APE tree
     ape_tree_in_R = ConvertArborTreeIntoApe(tree_coll,tree_collection_name)
     # then convert the character matrix in a data.frame in R
     char_matrix_in_R = ConvertArborCharacterMatrixIntoDataFrame(matrix_coll,matrix_collection_name)
     
-    # get the shortcut for the r interpreter
     r = robjects.r
-    
-    # phylosignal is defined in the picante library
-    r('library(picante)')
+    r('library(geiger)')
+    #r('library(laser)')
 
-    # set the row names of the table to be indexed by the 'species' attribute
-    commandstr = 'row.names('+char_matrix_in_R+') <- '+ char_matrix_in_R +'$species'
-    if verbose:
-        print  "commandstr:",commandstr
-    r(commandstr)
-
-    #commandstr = 'svl<- ' + char_matrix_in_R +'["SVL"]'
-    commandstr = 'selectedchar<- ' + char_matrix_in_R +'["'+character+'"]'
-    if verbose:
-        print "commandstr:",commandstr
-    r(commandstr)
+    # test diversification hypotheses and 
+    # fit models of speciation and extinction
     
-    if verbose:
-        print "character table to test for phylosignal:"
-        r('str(selectedchar)')
+    # very common first step = make lineage through time plot
+    # y axis should be logged
+    r('ltt.plot('+ape_tree_in_R+', log="y")')
     
-    #r('svl_named <- as.numeric(svl$SVL)')
-    commandstr = 'selectedchar_named <- as.numeric(selectedchar$'+character+')'
+    # gamma test for slowdowns in diversification
+    # this gives the test statistic
+    r('gs<-gammaStat('+ape_tree_in_R+')')
+    
+    print "Gamma test:"
+    r('print(gs)')
+ 
     if verbose:
-        print commandstr
-    r(commandstr)
-    r('names(selectedchar_named) <- rownames(selectedchar)')
-
-    # now we can test for signal
-    #res1<-phylosignal(svl, anoleTree)
-   
+        print "ape tree generated in R"
+        r('print('+str(ape_tree_in_R)+')')
+    
     #r('save('+ape_tree_in_R+',file="apetree")')
     #r('save('+char_matrix_in_R+',file="apematrix")')
     #commandstr = 'res1<-phylosignal(svl_named,phy='+ ape_tree_in_R +')'
-   
-    commandstr = 'res1<-phylosignal(selectedchar_named,phy='+ ape_tree_in_R +')'
-    if verbose:
-        print "commandstr:",commandstr
-    r(commandstr)
-    
-    # the IMPORTANT PARTS of this output are:
-    #res1$K # the value of the test statistic
-    #res1$PIC.variance.P # the P value
-    
-    r('print(res1$K)')
+    #commandstr = 'res1<-phylosignal(selectedchar_named,phy='+ ape_tree_in_R +')'
+    #if verbose:
+    #    print "commandstr:",commandstr
+    #r(commandstr)
     
     
     
 
-def CalculatePhylogeneticSignalBySeparateConnection(system,database,port,tree_collection_name,matrix_collection_name,character, verbose):
+def CalculateSpeciationBySeparateConnection(system,database,port,tree_collection_name,matrix_collection_name,character, verbose):
    
     connection = Connection(system, port)
     db = connection[database]    
@@ -289,9 +273,11 @@ def CalculatePhylogeneticSignalBySeparateConnection(system,database,port,tree_co
     r = robjects.r
     r('source("/Users/clisle/Projects/Arbor/code/python-R-integration/arbor2apeTreeHandler.R")')
     r('treeHandler = new("arbor2apeTreeHandler")')
-
     
-    result = InvokePicantePhyloSignal(tree_collection_name, tree_coll, matrix_collection_name,matrix_coll, character,verbose)
+    # load function definitions used for speciation
+    r('source("speciationDefines.R")')
+    
+    result = InvokeSpeciation(tree_collection_name, tree_coll, matrix_collection_name,matrix_coll, character,verbose)
     if (connection):
         connection.close()
     return result
