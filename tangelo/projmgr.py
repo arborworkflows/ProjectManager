@@ -12,7 +12,7 @@ def get(*pargs, **query_args):
         return tangelo.HTTPStatusCode(400, "Missing resource type")
 
     resource_type = pargs[0]
-    allowed = ["project"]
+    allowed = ["project", "analysis"]
     if resource_type == "project":
         if len(pargs) == 1:
             return api.getListOfProjectNames()
@@ -38,6 +38,17 @@ def get(*pargs, **query_args):
             return string
         else:
             return tangelo.HTTPStatusCode(400, "Bad request - got %d parameter(s), was expecting between 1 and 5")
+    elif resource_type == "analysis":
+        if len(pargs) == 1:
+            return api.getListOfAnalysisNames()
+        elif len(pargs) == 2:
+            analysis_name = pargs[1]
+            coll = api.db[api.returnCollectionForAnalysisByName(analysis_name)]
+            return bson.json_util.dumps(list(coll.find()))
+        elif len(pargs) == 3:
+            analysis_name = pargs[1]
+            coll = api.db[api.returnCollectionForAnalysisByName(analysis_name)]
+            return coll.find_one()["analysis"]["script"]
     else:
         return tangelo.HTTPStatusCode(400, "Bad resource type '%s' - allowed types are: %s" % (resource_type, ", ".join(allowed)))
 

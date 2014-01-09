@@ -28,6 +28,9 @@ import csv
 import urllib
 import urllib2
 
+# used to parse analysis names from our list of collections
+import re
+
 import sys
 sys.path.append("tangelo")
 
@@ -170,6 +173,11 @@ class ArborFileManager:
         collectionName = self.prefixString+projectName+"_"+datatypeName+"_"+datasetName
         return collectionName
 
+    # similar to above, but for analyses
+    def returnCollectionForAnalysisByName(self, analysis_name):
+        collection_name = "%sanalyses_%s" % (self.prefixString, analysis_name)
+        return collection_name
+
     # Convert dataset to a text string
     def getDatasetAsTextString(self,projectName,datatypeName, datasetName,stringFormat):
         outputString = None
@@ -186,6 +194,8 @@ class ArborFileManager:
         elif (datatypeName == "CharacterMatrix"):
           if (stringFormat == "CSV" or stringFormat == "csv"):
              outputString = phyloexport_algorithm.convertTableToCSVString(datasetCollection)
+          elif (stringFormat == "header" or stringFormat == "headers"):
+              outputString = phyloexport_algorithm.getHeadersForTable(datasetCollection)
           else:
              print "unrecognized format ", stringFormat
 
@@ -284,9 +294,6 @@ class ArborFileManager:
             self.db.ar_projects.update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'PhyloTree'}})
             # make sure the tree is rooted, so viewers work
             root_phylotree_algorithm.addRootToTree(treeCollection)
-            # emit a signal so the GUI knows to update
-            self.datatypeListChangedSignal.emit(); 
-            self.datasetListChangedSignal.emit(); 
 
   # add a tree record for exising collection
     def newTreeInProjectFromExistingCollection(self,treename,projectTitle,description):
@@ -295,9 +302,6 @@ class ArborFileManager:
         # add a tree record entry to the 'PyloTree' array in the project record
         self.db.ar_projects.update({"name": projectTitle}, { '$push': {u'PhyloTree': {treename:str(description)}}})
         self.db.ar_projects.update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'PhyloTree'}})
-        # emit a signal so the GUI knows to update
-        self.datatypeListChangedSignal.emit(); 
-        self.datasetListChangedSignal.emit();               
               
     
     # query from the OpenTreeOfLife.  This routine performs the fetch from OTL,
@@ -451,9 +455,22 @@ class ArborFileManager:
             characterNames.append(key)
         return characterNames
             
+   # add analysis to TreeStore.
+   # This function drops the analysis' collection first if it already exists.
+   # This way we don't end up with duplicate documents.
+    def newAnalysis(self, analysis_name, analysis_item):
+        collection_name = self.returnCollectionForAnalysisByName(analysis_name)
+        self.db.drop_collection(collection_name)
+        analysis_collection = self.db[collection_name]
+        self.insertIntoMongo(analysis_item, analysis_collection)
 
+    # returns a list of analysis names
+    def getListOfAnalysisNames(self):
+        analysis_names = []
+        regexp = re.compile(r"%sanalyses_(.*?)$" % self.prefixString)
+        for collection_name in self.db.collection_names():
+            match = regexp.search(collection_name)
+            if match:
+                analysis_names.append(match.group(1))
+        return analysis_names
 
-       
- 
-
-        
