@@ -39,6 +39,7 @@ sys.path.append("tangelo")
 
 import ArborAlgorithmManagerAPI
 
+
 import phyloimport_algorithm
 
 import root_phylotree_algorithm
@@ -49,7 +50,10 @@ from Bio import Phylo
 # parser routine for fasta files & sequences
 from Bio import SeqIO
 
- 
+# load API for managing workflows
+import ArborWorkflowManager
+
+
 # look at a sting and if it is a floating point number, convert its type to avoid saving "0.345" when 
 # we really want to save 0.345.  We have two tests in sequence so integer values can be returned as ints instead of floats
 
@@ -70,7 +74,29 @@ def convertIfNumber(s):
             return float(s)
         except ValueError:
             return s        
-            
+ 
+# utility class to add switch statements 
+class switch(object):
+    def __init__(self, value):
+        self.value = value
+        self.fall = False
+
+    def __iter__(self):
+        """Return the match method once, then stop"""
+        yield self.match
+        raise StopIteration
+
+    def match(self, *args):
+        """Indicate whether or not to enter a case suite"""
+        if self.fall or not args:
+            return True
+        elif self.value in args: # changed for v1.5, see below
+            self.fall = True
+            return True
+        else:
+            return False
+
+           
 class ArborFileManager:    
     
     def __init__(self):
@@ -81,6 +107,7 @@ class ArborFileManager:
         self.defaultMongoHost = 'localhost'
         self.defaultMongoPort = 27017
         self.defaultMongoDatabase = 'xdata'
+        self.workflows = dict()
         # all collections created have a prefix to destinguish arbor collections
         # from other collections in the database.  The default can be changed
         # through exercsting the API call to set an alternative string.
@@ -96,6 +123,8 @@ class ArborFileManager:
         self.defaultMongoHost = hostname;
     def setMongoDatabase(self,database):
         self.defaultMongoDatabase = database
+    def getMongoDatabase(self):
+        return self.defaultMongoDatabase
     def setMongoPort(self,portnumber):
         self.defaultMongoPort = portnumber
 
@@ -227,7 +256,7 @@ class ArborFileManager:
         # pick the 'result' field from the query
         newlist = []
         project = self.db.ar_projects.find_one({"name" : projectName})
-        print "found project record: ", project
+        #print "found project record: ", project
         # some projects may not have dataypes yet, true during initial development at least
         if u'datatypes' in project:
             projecttypes = project[u'datatypes']
@@ -393,15 +422,41 @@ class ArborFileManager:
         # make sure the sequence type exists in this project
         self.db.ar_projects.update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'Sequences'}})
 
-   # add sequences to the project
-    def newWorkflowInProject(self,instancename,filename,projectTitle):
-        collectionName = self.prefixString+projectTitle+"_"+"Workflows"
-        print "uploading workflow to collection: ",collectionName
-                        
+#------ workflows ------------------
+
+   # add workflow to the project
+    def newWorkflowInProject(self,instancename,projectTitle):
+        print "new workflow in project: ",projectTitle         
         # add a record entry to the 'Workflows' array in the project record
-        self.db.ar_projects.update({"name": projectTitle}, { '$push': {u'Workflows': {instancename:filename}}})
+        self.db.ar_projects.update({"name": projectTitle}, { '$push': {u'Workflows': instancename}})
         # make sure the workflow type exists in this project
         self.db.ar_projects.update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'Workflows'}})
+        # create a new workflow istance and add this workflow to the objects maintained by the API 
+        # (this is in memory so far, no storage)
+        newWorkflow = ArborWorkflowManager.WorkflowManager()
+        newWorkflow.setDatabase(self.defaultMongoDatabase)
+        self.workflows[instancename] = newWorkflow    
+
+    # add a new workstep to the workflow 
+    def newWorkstepInWorkflow(wflowName,workStepType,stepName,projectTitle,filterAttribute='attrib',filterValue=0.0):
+        if wflowName in self.workflows:
+            wflow = self.workflows[wflowName]
+            wflow.addWorkstepToWorkflow(workStepType, stepName)
+        else:
+            print "attempt to add step to non-existant workflow"
+ 
+    # read a workflow out of the database and execute it 
+    def executeWorkflowInProject(self,instancename,projectTitle):
+        # if the workflow is already loaded, run it.  Otherwise load from the backing database
+        if instancename in self.workflows:
+            self.workflows[instancename].executeWorkflow()
+        else:
+            # create new workflow manager and load from the datastore record
+            print "creating new workflow instance and loading it to run"
+            workflowMgr = ArborWorkflowManager.WorkflowManager()
+            workflowMgr.loadFrom(instancename, projectTitle)
+            workflowMgr.executeWorkflow()
+
 
     # return a python list filled with character strings 
     def returnCharacterListFromCharacterMatrix(self,instancename,projectTitle):

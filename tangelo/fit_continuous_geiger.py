@@ -60,7 +60,7 @@ def InvokeFitContinuous(tree_collection_name,tree_coll,matrix_collection_name,ma
     r(commandstr)
         # now store the tree in APE format as a new dataset in Arbor
     transformedTree = r['transformedTree']
-    r('save(transformedTree,file="transformedTree")')
+    #r('save(transformedTree,file="transformedTree")')
     
         
     #r('str(transformedTree)')

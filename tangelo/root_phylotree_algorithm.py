@@ -75,7 +75,7 @@ def recursiveCopyHelper(child,existing_coll,new_coll):
     else:
         # this is a leaf node, insert it and terminate the recursion
         phylo['_id'] = str(phylo['_id'])
-        new_coll.insert(phylo)
+        #new_coll.insert(phylo)
         del phylo
 
 

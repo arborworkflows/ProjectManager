@@ -80,6 +80,7 @@ class Form(QDialog):
         self.newObservationsButton = QPushButton("Load Occurrences")
         self.newSequencesButton = QPushButton("Load Sequences")
         self.newWorkflowButton = QPushButton("Load Workflow")
+        self.changeDatabaseButton = QPushButton("Change Database Info")
         
         button_panel.addWidget(self.newProjectButton)  
         button_panel.addWidget(self.deleteProjectButton)
@@ -91,6 +92,9 @@ class Form(QDialog):
         button_panel2.addWidget(self.newObservationsButton)
         button_panel2.addWidget(self.newSequencesButton)
         button_panel2.addWidget(self.newWorkflowButton)
+        button_panel2.addWidget(self.newWorkflowButton)
+        button_panel2.addWidget(self.changeDatabaseButton)
+        
         
         # emit a single when a project is selected
         #arbor_project_changed = pyqtSignal(string)
@@ -116,6 +120,7 @@ class Form(QDialog):
         self.newCharacterButton.clicked.connect(self.processNewCharacterButton)
         self.newObservationsButton.clicked.connect(self.processNewObservationsButton)
         self.newSequencesButton.clicked.connect(self.processNewSequencesButton)
+        self.changeDatabaseButton.clicked.connect(self.processDatabaseChangeButton)
 
         # set callback so user clicking on a project displays project info
         #self.projectListWidget.itemActivated.connect(self.clearTypesandDatasetLists)
@@ -230,6 +235,14 @@ class Form(QDialog):
 
     def processNewSequencesButton(self):
         dialogs.openNewSequenceDialog()
+
+    def processDatabaseChangeButton(self):
+        global api
+        dialogs.openDatabaseChangeDialog()
+        self.projectListWidget.clear()
+        self.clearTypesandDatasetLists()
+        #api.initDatabaseConnection()
+        self.updateProjectList()
         
     def processAlgorithmControlsButton(self):
         dialogs.openAlgorithmControlsDialog();
