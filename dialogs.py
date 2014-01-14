@@ -59,7 +59,6 @@ class NewProjectDialog(QDialog):
             self.api.newProject(projectTitle)
             
     
-    
 def initializeAllDialogs(arborAPI,algorithms):
     global savedArborAPI
     savedArborAPI = arborAPI
@@ -77,12 +76,13 @@ def initializeAllDialogs(arborAPI,algorithms):
     newWorkflowDialogInstance = NewWorkflowDialog(arborAPI)
     global newOpenTreeOfLifeDialogInstance
     newOpenTreeOfLifeDialogInstance = NewOpenTreeOfLifeDialog(arborAPI)
+    global newDatabaseInfoDialogInstance
+    newDatabaseInfoDialogInstance = ChangeDatabaseDialog(arborAPI)
     global newAlgorithmControlsDialogInstance
     newAlgorithmControlsDialogInstance = NewAlgorithmControlsDialog(arborAPI,algorithms)
     if (arborAPI.getCurrentProject()):
         newAlgorithmControlsDialogInstance.setCurrentProject(arborAPI.getCurrentProject())
     
-
     
 def openNewProjectDialog():
     global app
@@ -93,6 +93,56 @@ def openNewProjectDialog():
     #if ok:
     #    print "accept was clicked"
 
+
+           
+# define the dialogs designed to exercise the API 
+class ChangeDatabaseDialog(QDialog):   
+    # Define the  user interface for a new dialog to be created
+    def __init__(self, ArborAPI,parent=None):
+        super(ChangeDatabaseDialog, self).__init__(parent)
+        self.api = ArborAPI
+        self.titleText = QLabel("Enter the database to use:")
+        self.databaseNameDialog = QLineEdit()
+        self.titleText2 = QLabel("Enter an (optional) prefix string:")
+        self.prefixStringDialog = QLineEdit()
+        self.cancelButton = QPushButton("Cancel")
+        self.acceptButton = QPushButton("Accept")
+        self.layout = QVBoxLayout()
+        self.layout.addWidget(self.titleText)
+        self.layout.addWidget(self.databaseNameDialog)
+        self.layout.addWidget(self.titleText2)
+        self.layout.addWidget(self.prefixStringDialog)
+        self.layout.addWidget(self.acceptButton)
+        self.layout.addWidget(self.cancelButton)
+        self.setLayout(self.layout)
+        self.cancelButton.clicked.connect(self.closeDatabaseDialog)
+        self.acceptButton.clicked.connect(self.setDatabaseInfo)
+        
+    def closeDatabaseDialog(self):
+        self.hide()
+
+    def setDatabaseInfo(self):
+        databaseTitleAsQstring = self.databaseNameDialog.text()
+        prefixAsQstring = self.prefixStringDialog.text()        
+        # need to convert from PyQt4.QtCore.QString to Python string
+        databaseTitle = str(databaseTitleAsQstring)
+        prefixString = str(prefixAsQstring)
+        # if a valid name was entered, create the project record 
+        if len(databaseTitle)>0:
+            print "changing database to  :",databaseTitle
+            print "changing prefix to  :",prefixString
+            self.api.setMongoDatabase(databaseTitle)
+            self.api.setPrefixString(prefixString)
+            self.api.initDatabaseConnection()
+            self.hide()
+
+          
+def openDatabaseChangeDialog():
+    global app
+    print "open database dialog"
+    global newDatabaseInfoDialogInstance
+    newDatabaseInfoDialogInstance.show()
+        
 
 
 # pop up to load a new tree into the selected project
