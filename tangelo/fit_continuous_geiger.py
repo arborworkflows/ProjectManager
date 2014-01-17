@@ -60,8 +60,7 @@ def InvokeFitContinuous(tree_collection_name,tree_coll,matrix_collection_name,ma
     r(commandstr)
         # now store the tree in APE format as a new dataset in Arbor
     transformedTree = r['transformedTree']
-    #r('save(transformedTree,file="transformedTree")')
-    
+    #r('save(transformedTree,file="transformedTree")')  
         
     #r('str(transformedTree)')
     importApeTreeToArbor(transformedTree,out_collection_name)
@@ -79,7 +78,7 @@ def FitContinuousBySeparateConnection(system,database,port,tree_collection_name,
     # startup up an R interpreter to do the processing.  We will be converting a tree, so create a tree handler
     robjects.r("library('geiger')")
     r = robjects.r
-    r('source("/Users/clisle/Projects/Arbor/code/python-R-integration/arbor2apeTreeHandler.R")')
+    r('source("arbor2apeTreeHandler.R")')
     r('treeHandler = new("arbor2apeTreeHandler")')
 
     

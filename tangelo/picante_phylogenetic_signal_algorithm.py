@@ -287,10 +287,9 @@ def CalculatePhylogeneticSignalBySeparateConnection(system,database,port,tree_co
     # startup up an R interpreter to do the processing.  We will be converting a tree, so create a tree handler
     robjects.r("library('geiger')")
     r = robjects.r
-    r('source("/Users/clisle/Projects/Arbor/code/python-R-integration/arbor2apeTreeHandler.R")')
+    r('source("arbor2apeTreeHandler.R")')
     r('treeHandler = new("arbor2apeTreeHandler")')
 
-    
     result = InvokePicantePhyloSignal(tree_collection_name, tree_coll, matrix_collection_name,matrix_coll, character,verbose)
     if (connection):
         connection.close()
