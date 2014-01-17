@@ -671,7 +671,7 @@ class NewAlgorithmControlsDialog(QDialog):
                 outputname = self.outputObjectName.text()
             # TODO: add checking logic here to make sure appropriate data types are defined for algorithms
             # before running them.  All algorithms could have a list of data they depend on and it would get checked 
-            self.algorithms.runAlgorithmByName(algorithmToRun,self.currentProjectName,currenttree,currentmatrix,currentcharacter,outputname)
+            self.algorithms.runAlgorithmByName(algorithmToRun,self.api.getMongoDatabase(),self.currentProjectName,currenttree,currentmatrix,currentcharacter,outputname)
         pass
 #            
 def openAlgorithmControlsDialog():

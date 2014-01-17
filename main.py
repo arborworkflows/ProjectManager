@@ -239,14 +239,14 @@ class Form(QDialog):
     def processDatabaseChangeButton(self):
         global api
         dialogs.openDatabaseChangeDialog()
+        
+    def refreshAfterDatabaseChange(self):
         self.projectListWidget.clear()
         self.clearTypesandDatasetLists()
-        #api.initDatabaseConnection()
-        self.updateProjectList()
+        self.updateProjectList()        
         
     def processAlgorithmControlsButton(self):
         dialogs.openAlgorithmControlsDialog();
-
 
 if __name__ == '__main__':
     # Create the Qt Application
@@ -257,7 +257,7 @@ if __name__ == '__main__':
     global api
     api = QtArborFileManager()
     api.initDatabaseConnection()
-    
+   
     # initialize the installed algorithm API
     global algorithms
     algorithms = QtArborAlgorithmManager()

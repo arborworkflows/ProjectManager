@@ -30,11 +30,13 @@ class QtArborFileManager(ArborFileManager, QObject):
     projectListChangedSignal = pyqtSignal();
     datasetListChangedSignal = pyqtSignal();
     datatypeListChangedSignal = pyqtSignal();
+    
 
     def __init__(self, parent=None):
         self.super = super(QtArborFileManager, self)
         QObject.__init__(self, parent)
         self.super.__init__()
+        self.super.setGuiEnabled(True)
 
     # create the record in Mongo for a new project
     def newProject(self,projectName):
