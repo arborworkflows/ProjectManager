@@ -104,7 +104,9 @@ class ChangeDatabaseDialog(QDialog):
         self.titleText = QLabel("Enter the database to use:")
         self.databaseNameDialog = QLineEdit()
         self.titleText2 = QLabel("Enter an (optional) prefix string:")
+        self.titleText3 = QLabel("Enter a separation string (e.g. '.' or '_'):")        
         self.prefixStringDialog = QLineEdit()
+        self.separationStringDialog = QLineEdit()        
         self.cancelButton = QPushButton("Cancel")
         self.acceptButton = QPushButton("Accept")
         self.layout = QVBoxLayout()
@@ -112,6 +114,8 @@ class ChangeDatabaseDialog(QDialog):
         self.layout.addWidget(self.databaseNameDialog)
         self.layout.addWidget(self.titleText2)
         self.layout.addWidget(self.prefixStringDialog)
+        self.layout.addWidget(self.titleText3)
+        self.layout.addWidget(self.separationStringDialog)
         self.layout.addWidget(self.acceptButton)
         self.layout.addWidget(self.cancelButton)
         self.setLayout(self.layout)
@@ -123,16 +127,20 @@ class ChangeDatabaseDialog(QDialog):
 
     def setDatabaseInfo(self):
         databaseTitleAsQstring = self.databaseNameDialog.text()
-        prefixAsQstring = self.prefixStringDialog.text()        
+        prefixAsQstring = self.prefixStringDialog.text()   
+        separatorAsQstring = self.separationStringDialog.text()             
         # need to convert from PyQt4.QtCore.QString to Python string
         databaseTitle = str(databaseTitleAsQstring)
         prefixString = str(prefixAsQstring)
+        separatorString = str(separatorAsQstring)
         # if a valid name was entered, create the project record 
         if len(databaseTitle)>0:
             print "changing database to  :",databaseTitle
             print "changing prefix to  :",prefixString
+            print "changing separator to: ",separatorString
             self.api.setMongoDatabase(databaseTitle)
             self.api.setPrefixString(prefixString)
+            self.api.setSeparatorString(separatorString)
             self.api.initDatabaseConnection()
             self.hide()
 

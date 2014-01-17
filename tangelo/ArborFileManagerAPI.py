@@ -112,13 +112,14 @@ class ArborFileManager:
         self.defaultMongoPort = 27017
         #self.defaultMongoDatabase = 'xdata'
         self.defaultMongoDatabase = 'arbor'
-        self.separatorString = "."
         self.workflows = dict()
         # all collections created have a prefix to destinguish arbor collections
         # from other collections in the database.  The default can be changed
-        # through exercsting the API call to set an alternative string.
+        # through exercsting the API call to set an alternative string. Same for the separation
+        # characters
         #self.prefixString = 'ar_'
         self.prefixString = ''
+        self.separatorString = "."
         self.projectCollectionName = self.prefixString+'projects'
 
         # the default mode is no GUI, so no Qt signals are emitted. if a Qt GUI
@@ -134,6 +135,10 @@ class ArborFileManager:
     def setPrefixString(self,newstr):
        self.prefixString = newstr;
        self.projectCollectionName = self.prefixString+'projects'
+       
+    # change the default prefix string
+    def setSeparatorString(self,newstr):
+       self.separatorString = newstr;
 
     # allow for the default parameters for the mongo instance to be changed
     def setMongoHost(self,hostname):
