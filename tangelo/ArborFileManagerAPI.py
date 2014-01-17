@@ -135,7 +135,7 @@ class ArborFileManager:
     def setPrefixString(self,newstr):
        self.prefixString = newstr;
        self.projectCollectionName = self.prefixString+'projects'
-       
+
     # change the default prefix string
     def setSeparatorString(self,newstr):
        self.separatorString = newstr;
@@ -205,10 +205,10 @@ class ArborFileManager:
                 newlist.append( projectlist[i][u'name'])
         return newlist
 
-    def setCurrentProject(self,prname):
+    def setCurrentProjectName(self,prname):
         print "api: setting curren project to: ",prname
         self.currentProjectName = prname
-    def getCurrentProject(self):
+    def getCurrentProjectName(self):
         return self.currentProjectName
 
    # look in the database and return a list of the datatypes allowed by a
@@ -596,4 +596,5 @@ class ArborFileManager:
             if match:
                 analysis_names.append(match.group(1))
         return analysis_names
+
 

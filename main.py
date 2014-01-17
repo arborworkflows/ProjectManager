@@ -157,7 +157,7 @@ class Form(QDialog):
             # now display the types in this project
             prname = str(self.projectListWidget.currentItem().text())
             # TODO: do we need a test for a valid project here?  (see selectDataTypeItem)
-            api.setCurrentProject(prname)
+            api.setCurrentProjectName(prname)
             typeListForProject = api.getListOfTypesForProject(prname)
             print "api returned types: ",typeListForProject
             self.datatypeListWidget.clear()
@@ -178,7 +178,7 @@ class Form(QDialog):
             # only needs to be updated if the user is currently observing some
             # datasets
             if len(typename)>0:
-                prname = api.getCurrentProject()
+                prname = api.getCurrentProjectName()
                 instancesForThisType = api.getListOfDatasetsByProjectAndType(prname,typename)
                 print "api returned types: ",instancesForThisType
                 self.datasetListWidget.clear()
