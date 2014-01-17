@@ -112,6 +112,7 @@ class ArborFileManager:
         self.defaultMongoPort = 27017
         #self.defaultMongoDatabase = 'xdata'
         self.defaultMongoDatabase = 'arbor'
+        self.separatorString = "."
         self.workflows = dict()
         # all collections created have a prefix to destinguish arbor collections
         # from other collections in the database.  The default can be changed
@@ -237,7 +238,7 @@ class ArborFileManager:
                     # each dataset name is the key in a dictionary.  We can
                     # assume there is only one key in the dictionary since each
                     # dataset has its own dict
-                    collectionName = self.prefixString+projectName+"_"+datatype+"_"+datasetlist[i].keys()[0]
+                    collectionName = self.prefixString+projectName+self.separatorString+datatype+self.separatorString+datasetlist[i].keys()[0]
                     print "deleting dataset: ",collectionName
                     self.db.drop_collection(collectionName)
         # now remove the project record from the projects collection
@@ -246,7 +247,7 @@ class ArborFileManager:
 
     # we might change the naming algorithm later, so lets use this method to lookup the names
     def returnCollectionForObjectByName(self,projectName,datatypeName, datasetName):
-        collectionName = self.prefixString+projectName+"_"+datatypeName+"_"+datasetName
+        collectionName = self.prefixString+projectName+self.separatorString+datatypeName+self.separatorString+datasetName
         return collectionName
 
     # similar to above, but for analyses
@@ -293,7 +294,7 @@ class ArborFileManager:
                     # each dataset name is the key in a dictionary.  We can
                     # assume there is only one key in the dictionary since each
                     # dataset has its own dict
-                    collectionName = self.prefixString+projectName+"_"+datatypeName+"_"+datasetlist[i].keys()[0]
+                    collectionName = self.prefixString+projectName+self.separatorString+datatypeName+self.separatorString+datasetlist[i].keys()[0]
                     print "deleting dataset named: ",datasetName, " in collection:",collectionName
                     # remove the corrresponding entry from the list to delete the reference to the dataset
                     datasetlist.pop(i)
@@ -329,7 +330,7 @@ class ArborFileManager:
 
     # add a tree to the project
     def newTreeInProject(self,treename,treefile,projectTitle, treetype):
-        collectionName = self.prefixString+projectTitle+"_"+"PhyloTree"+"_"+treename
+        collectionName = self.prefixString+projectTitle+self.separatorString+"PhyloTree"+self.separatorString+treename
         treeCollection = self.db[collectionName]
         print "uploading tree to collection: ",collectionName
         print "treetype is: ",treetype
@@ -346,7 +347,7 @@ class ArborFileManager:
 
     # add a tree to the project
     def newTreeInProjectFromString(self,treename,treestring,projectTitle, description,treetype):
-        collectionName = self.prefixString+projectTitle+"_"+"PhyloTree"+"_"+treename
+        collectionName = self.prefixString+projectTitle+self.separatorString+"PhyloTree"+self.separatorString+treename
         treeCollection = self.db[collectionName]
         treeCollection.drop()
         print "uploading tree to collection: ",collectionName
@@ -379,7 +380,7 @@ class ArborFileManager:
 
   # add a tree record for exising collection
     def newTreeInProjectFromExistingCollection(self,treename,projectTitle,description):
-        collectionName = self.prefixString+projectTitle+"_"+"PhyloTree"+"_"+treename
+        collectionName = self.prefixString+projectTitle+self.separatorString+"PhyloTree"+self.separatorString+treename
         print "adding record of tree in collection: ",collectionName
         # add a tree record entry to the 'PyloTree' array in the project record
 
@@ -410,7 +411,7 @@ class ArborFileManager:
 
     # add a character matrix to the project
     def newCharacterMatrixInProject(self,instancename,filename,projectTitle):
-        collectionName = self.prefixString+projectTitle+"_"+"CharacterMatrix"+"_"+instancename
+        collectionName = self.prefixString+projectTitle+self.separatorString+"CharacterMatrix"+self.separatorString+instancename
         newCollection = self.db[collectionName]
         print "uploading characters to collection: ",collectionName
         # create the new collection in mongo for this tree
@@ -447,7 +448,7 @@ class ArborFileManager:
 
     # add a character matrix to the project
     def newCharacterMatrixInProjectFromString(self, datasetname, data, projectTitle, filename):
-        collectionName = self.prefixString+projectTitle+"_"+"CharacterMatrix"+"_"+datasetname
+        collectionName = self.prefixString+projectTitle+self.separatorString+"CharacterMatrix"+self.separatorString+datasetname
         newCollection = self.db[collectionName]
         print "uploading characters to collection: ",collectionName
 
@@ -476,7 +477,7 @@ class ArborFileManager:
 
     # add a character matrix to the project
     def newOccurrencesInProject(self,instancename,filename,projectTitle):
-        collectionName = self.prefixString+projectTitle+"_"+"Occurrences"+"_"+instancename
+        collectionName = self.prefixString+projectTitle+self.separatorString+"Occurrences"+self.separatorString+instancename
         newCollection = self.db[collectionName]
         print "uploading occurreces to collection: ",collectionName
         # create the new collection in mongo for this tree
@@ -507,7 +508,7 @@ class ArborFileManager:
 
     # add sequences to the project
     def newSequencesInProject(self,instancename,filename,projectTitle):
-        collectionName = self.prefixString+projectTitle+"_"+"Sequences"+"_"+instancename
+        collectionName = self.prefixString+projectTitle+self.separatorString+"Sequences"+self.separatorString+instancename
         # create the new collection in mongo for sequence data
         newCollection = self.db[collectionName]
         print "uploading sequences to collection: ",collectionName
@@ -563,7 +564,7 @@ class ArborFileManager:
     # return a python list filled with character strings
     def returnCharacterListFromCharacterMatrix(self,instancename,projectTitle):
         # for some reaseon, the str() was required to resolve the collection name in mongo
-        collectionName = str(self.prefixString+projectTitle+"_"+"CharacterMatrix"+"_"+instancename)
+        collectionName = str(self.prefixString+projectTitle+self.separatorString+"CharacterMatrix"+self.separatorString+instancename)
         #print 'collection for attribute list is: ',collectionName
         matrix_collection = self.db[collectionName]
         record = matrix_collection.find_one()

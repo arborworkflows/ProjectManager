@@ -80,7 +80,6 @@ def FitContinuousBySeparateConnection(system,database,port,tree_collection_name,
     r = robjects.r
     r('source("arbor2apeTreeHandler.R")')
     r('treeHandler = new("arbor2apeTreeHandler")')
-
     
     result = InvokeFitContinuous(tree_collection_name, tree_coll, matrix_collection_name,matrix_coll, character, parameters, out_tree_coll,verbose)
     if (connection):
