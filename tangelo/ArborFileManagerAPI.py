@@ -140,15 +140,19 @@ class ArborFileManager:
     def setSeparatorString(self,newstr):
        self.separatorString = newstr;
 
-    # allow for the default parameters for the mongo instance to be changed
+    # allow for the default parameters for the mongo instance to be changed and queried
     def setMongoHost(self,hostname):
         self.defaultMongoHost = hostname;
+    def getMongoHost(self):
+        return self.defaultMongoHost
     def setMongoDatabase(self,database):
         self.defaultMongoDatabase = database
     def getMongoDatabase(self):
         return self.defaultMongoDatabase
     def setMongoPort(self,portnumber):
         self.defaultMongoPort = portnumber
+    def getMongoPort(self):
+        return self.defaultMongoPort
 
 
 

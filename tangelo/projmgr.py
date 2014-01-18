@@ -49,13 +49,20 @@ def get(*pargs, **query_args):
             analysis_name = pargs[1]
             coll = api.db[api.returnCollectionForAnalysisByName(analysis_name)]
             return coll.find_one()["analysis"]["script"]
+    # add a collection option to return the database and collection name for an object in the 
+    # Arbor treestore.  This 'information hiding violation' of the treestore allows for low-level
+    # clients to connect and work directly with the mongo database, should it be needed.  This level
+    # is used in the phylomap application. 
     elif resource_type == "collection":
         if len(pargs) == 4:
             project = pargs[1]
             datatype = pargs[2]
             dataset = pargs[3]
-            collname = api.returnCollectionForObjectByName(project, datatype, dataset)   
-            return collname           
+            collname = api.returnCollectionForObjectByName(project, datatype, dataset)  
+            dbname = api.getMongoDatabase()
+            dbhost = api.getMongoHost()
+            dbport = api.getMongoPort()
+            return bson.json_util.dumps({'host':dbhost,'port':dbport,'db': dbname,'collection': collname})          
     else:
         return tangelo.HTTPStatusCode(400, "Bad resource type '%s' - allowed types are: %s" % (resource_type, ", ".join(allowed)))
 
