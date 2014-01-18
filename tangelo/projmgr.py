@@ -49,6 +49,13 @@ def get(*pargs, **query_args):
             analysis_name = pargs[1]
             coll = api.db[api.returnCollectionForAnalysisByName(analysis_name)]
             return coll.find_one()["analysis"]["script"]
+    elif resource_type == "collection":
+        if len(pargs) == 4:
+            project = pargs[1]
+            datatype = pargs[2]
+            dataset = pargs[3]
+            collname = api.returnCollectionForObjectByName(project, datatype, dataset)   
+            return collname           
     else:
         return tangelo.HTTPStatusCode(400, "Bad resource type '%s' - allowed types are: %s" % (resource_type, ", ".join(allowed)))
 
