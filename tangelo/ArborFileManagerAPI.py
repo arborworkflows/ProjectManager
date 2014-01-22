@@ -215,8 +215,8 @@ class ArborFileManager:
     def getCurrentProjectName(self):
         return self.currentProjectName
 
-   # look in the database and return a list of the datatypes allowed by a
-   # particular project
+    # look in the database and return a list of the datatypes allowed by a
+    # particular project
     def getListOfTypesForProject(self, projname):
         # return a list of only the project names by using the $project operator in mongo.
         # pick the 'result' field from the query
@@ -550,7 +550,7 @@ class ArborFileManager:
         self.workflows[instancename] = newWorkflow
 
     # add a new workstep to the workflow
-    def newWorkstepInWorkflow(wflowName,workStepType,stepName,projectTitle,filterAttribute='attrib',filterValue=0.0):
+    def newWorkstepInWorkflow(self,wflowName,workStepType,stepName,projectTitle):
         if wflowName in self.workflows:
             wflow = self.workflows[wflowName]
             wflow.addWorkstepToWorkflow(workStepType, stepName)

@@ -49,47 +49,59 @@ def get(*pargs, **query_args):
             analysis_name = pargs[1]
             coll = api.db[api.returnCollectionForAnalysisByName(analysis_name)]
             return coll.find_one()["analysis"]["script"]
-    # add a collection option to return the database and collection name for an object in the 
+    # add a collection option to return the database and collection name for an object in the
     # Arbor treestore.  This 'information hiding violation' of the treestore allows for low-level
     # clients to connect and work directly with the mongo database, should it be needed.  This level
-    # is used in the phylomap application. 
+    # is used in the phylomap application.
     elif resource_type == "collection":
         if len(pargs) == 4:
             project = pargs[1]
             datatype = pargs[2]
             dataset = pargs[3]
-            collname = api.returnCollectionForObjectByName(project, datatype, dataset)  
+            collname = api.returnCollectionForObjectByName(project, datatype, dataset)
             dbname = api.getMongoDatabase()
             dbhost = api.getMongoHost()
             dbport = api.getMongoPort()
-            return bson.json_util.dumps({'host':dbhost,'port':dbport,'db': dbname,'collection': collname})          
+            return bson.json_util.dumps({'host':dbhost,'port':dbport,'db': dbname,'collection': collname})
     else:
         return tangelo.HTTPStatusCode(400, "Bad resource type '%s' - allowed types are: %s" % (resource_type, ", ".join(allowed)))
 
 @tangelo.restful
-def put(resource, projname, datasetname=None, data=None, filename=None, filetype=None, **kwargs):
-    if resource != "project":
+def put(resource, projname, datasetname=None, data=None, objname=None, objtype=None, **kwargs):
+    if (resource != "project") and (resource != "workflow"):
         return tangelo.HTTPStatusCode(400, "Bad resource type '%s' - allowed types are: project")
-
-    if datasetname is None:
-        api.newProject(projname)
-    else:
-        if filename is None:
-            return tangelo.HTTPStatusCode(400, "Missing argument 'filename'")
-
-        if filetype is None:
-            return tangelo.HTTPStatusCode(400, "Missing argument 'filetype'")
-
-        if data is None:
-            return tangelo.HTTPStatusCode(400, "Missing argument 'data'")
-
+    if resource == "project":
         if datasetname is None:
-            return tangelo.HTTPStatusCode(400, "Missing argument 'datasetname'")
+            api.newProject(projname)
+        else:
+            if objname is None:
+                return tangelo.HTTPStatusCode(400, "Missing argument 'objname'")
 
-        if filetype == "newick" or filetype == "phyloxml":
-            api.newTreeInProjectFromString(datasetname, data, projname, filename, filetype)
-        if filetype == "csv":
-            api.newCharacterMatrixInProjectFromString(datasetname, data, projname, filename)
+            if objtype is None:
+                return tangelo.HTTPStatusCode(400, "Missing argument 'objtype'")
+
+            if data is None:
+                return tangelo.HTTPStatusCode(400, "Missing argument 'data'")
+
+            if datasetname is None:
+                return tangelo.HTTPStatusCode(400, "Missing argument 'datasetname'")
+
+            # user wants to upload a tree or a character matrix
+            if objtype == "newick" or objtype == "phyloxml":
+                api.newTreeInProjectFromString(datasetname, data, projname, objname, objtype)
+            if objtype == "csv":
+                api.newCharacterMatrixInProjectFromString(datasetname, data, projname, objname)
+
+    # workflow creation
+    #  arborapi: /workflow/projname/workflowname - creates new empty workflow
+    #  arborapi: /workflow/projname/workflowname//
+    if resource == "workflow":
+            # the user wants to create a new, empty workflow
+            if (data is None) and (objtype is None) and (objname is None):
+                api.newWorkflowInProject(datasetname, projname)
+            else:
+                if (data == "workstep"):
+                    api.newWorkstepInWorkflow(datasetname, objtype, objname, projname)
 
     return "OK"
 
