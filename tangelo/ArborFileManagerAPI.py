@@ -21,6 +21,7 @@ Requirements:
 import pymongo
 from bson import ObjectId
 from pymongo import Connection
+from pymongo import MongoClient
 import json
 import csv
 
@@ -30,6 +31,9 @@ import urllib2
 
 # used to parse analysis names from our list of collections
 import re
+
+# used to check environment variables
+import os
 
 import sys
 sys.path.append("tangelo")
@@ -162,8 +166,17 @@ class ArborFileManager:
         # multiple backing databases might be in use.  Don't leave stranded connections.
         if (getattr(self,'connection',False)):
             self.connection.close()
-        self.connection = Connection(self.defaultMongoHost, self.defaultMongoPort)
-        self.db = self.connection[self.defaultMongoDatabase]
+
+        # special case for Heroku environment
+        if 'MONGOLAB_URI' in os.environ:
+            mongo_uri = os.environ['MONGOLAB_URI']
+            other_part, sep, mongo_db = mongo_uri.rpartition('/')
+            self.connection = MongoClient(mongo_uri)
+            self.db = self.connection[mongo_db]
+        else:
+            self.connection = Connection(self.defaultMongoHost, self.defaultMongoPort)
+            self.db = self.connection[self.defaultMongoDatabase]
+
         # if there is a GUI, its project list needs to be updated because of the change in
         # the backing store for the API.
         print "changed database"
