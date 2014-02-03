@@ -17,6 +17,7 @@ Requirements:
     - pymongo, csv packages for python
 """
 
+
 import sys
 sys.path.append("tangelo")
 from ArborFileManagerAPI import ArborFileManager
@@ -30,7 +31,7 @@ class QtArborFileManager(ArborFileManager, QObject):
     projectListChangedSignal = pyqtSignal();
     datasetListChangedSignal = pyqtSignal();
     datatypeListChangedSignal = pyqtSignal();
-    
+
 
     def __init__(self, parent=None):
         self.super = super(QtArborFileManager, self)
@@ -76,7 +77,7 @@ class QtArborFileManager(ArborFileManager, QObject):
         self.datasetListChangedSignal.emit()
 
    # add sequences to the project
-    def newWorkflowInProject(self,instancename,filename,projectTitle):
-        self.super.newWorkflowInProject(instancename, filename, projectTitle)
+    def newWorkflowInProject(self,instancename,projectTitle):
+        self.super.newWorkflowInProject(instancename, projectTitle)
         self.datatypeListChangedSignal.emit()
         self.datasetListChangedSignal.emit()

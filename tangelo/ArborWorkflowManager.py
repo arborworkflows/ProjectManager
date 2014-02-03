@@ -7,51 +7,89 @@ Created on Thu Dec 19 23:00:12 2013
 import ArborWorksteps
 from ArborWorksteps import switch
 
+import bson.json_util
+
+
 class WorkflowManager:
     def __init__(self):
         self.worksteps = dict()
+        self.workflowName = 'default'
         self.databaseName = 'arbor'
         self.projectName = 'workflows'
+        self.arbor_workstep_dictionary = dict()
+
         # keep a list of all steps where output is used by another step, these are internal
         # nodes and will be executed implicitly
         self.internalSteps = []
-    
+        self.initWorkstepLibrary()
+
+    # Setup the list of the worksteps installed in Arbor.  We want to make this
+    # dynamic via plug-in techniques later, but this direct declaration will allow us to
+    # create a prototype for the PIs to test with
+
+    def initWorkstepLibrary(self):
+        # setup the worksteps to run.  This dictionary can be used as a dispatching tool for selecting worksteps
+        # dynamically.
+        self.arbor_workstep_list = [
+            'DatasetSource',
+            'DatasetFilter',
+            'DatasetCopy'
+        ]
+
+    def returnListOfLoadedWorksteps(self):
+        # for algorithms, we used a disctionary as a dispatcher, here we are using only a list
+        #names = []
+        #for key in self.arbor_workstep_list.keys():
+        #    names.append(key)
+        return self.arbor_workstep_list
+
+
     def setDatabaseName(self,dbname):
         self.databaseName = dbname
 
     def setProjectName(self,projname):
         self.projectName = projname
-        
+
+    def setWorkflowName(self,wfname):
+        self.workflowName = wfname
+
     def testWorkstepExists(self,workstepname):
         # validate that the objects exist
         try:
             temp = self.worksteps[workstepname]
         except:
             return False
-        return True           
+        return True
 
-    # initialize the correct type of worktep, depending on the user's input  
+    # initialize the correct type of worktep, depending on the user's input
     def addWorkstepToWorkflow(self,worksteptype, workstepname):
-        foundMatch = False
-        for case in switch(worksteptype):
-                if case('DatasetSource'):
+        print "preparing to add step type of",worksteptype," named ",workstepname
+        # add test to see if we already have a workstep by this name
+        if workstepname in self.worksteps:
+            print "another workstep with the name ",workstepname ,"already exists in this workflow"
+            raise TypeError
+        else:
+            foundMatch = False
+            for case in switch(worksteptype):
+                if case('DatasetSource') or case('arbor.analysis.datasetsource'):
                     newStep = ArborWorksteps.DatasetSourceWorkstep()
                     foundMatch = True
                     break
-                if case('DatasetFilter'):
+                if case('DatasetFilter') or case('arbor.analysis.datasetfilter'):
                     newStep = ArborWorksteps.DatasetFilteringWorkstep()
                     foundMatch = True
-                    break        
-                if case('DatasetCopy'):
+                    break
+                if case('DatasetCopy') or case('arbor.analysis.datasetcopy'):
                     newStep = ArborWorksteps.DatasetCopyWorkstep()
                     foundMatch = True
                     break
-        if foundMatch:
-            print "creating step ",workstepname
-            newStep.setName(workstepname) 
-            newStep.setDatabaseName(self.databaseName) 
-            newStep.setProjectName(self.projectName)              
-            self.worksteps[workstepname] = newStep
+            if foundMatch:
+                print "creating step ",workstepname
+                newStep.setName(workstepname)
+                newStep.setDatabaseName(self.databaseName)
+                newStep.setProjectName(self.projectName)
+                self.worksteps[workstepname] = newStep
+                print "there are now",len(self.worksteps.keys()), " steps"
 
     # set a parameter in a workstep.  This violates information hiding at the workstep level,
     #  but avoids the need for parameter setting machinery for now..
@@ -61,7 +99,7 @@ class WorkflowManager:
             return True
         else:
             return False
-        
+
 
     # connect an output of one step to the input of another.  The datatype is used
     # to determine the correct output/input combinations to connect
@@ -70,10 +108,10 @@ class WorkflowManager:
         if not self.testWorkstepExists(sourceStepName):
             print "workflow mgr: source workstep not found in workflow:",sourceStepName
         if not self.testWorkstepExists(destStepName):
-            print "workflow mgr: destination workstep not found in workflow: ",destStepName            
+            print "workflow mgr: destination workstep not found in workflow: ",destStepName
         # connect them together.  This is initially simplified because we are only dealing with single
         # input and single output filters currently.  This can be expanded later if this approach proves to be worthwhile
-        # Type checking is done at the workstep level, catch error here if a type mismatch has occurred. 
+        # Type checking is done at the workstep level, catch error here if a type mismatch has occurred.
         try:
             source = self.worksteps[sourceStepName]
             dest = self.worksteps[destStepName]
@@ -96,26 +134,50 @@ class WorkflowManager:
         for step in self.worksteps:
             self.worksteps[step].printSelf()
 
-
-    def cleanupOutput():
+    def cleanupOutput(self):
         # for all steps in workflow, query the output collection and drop it to clean
         # out any intermediate results
         pass
-    
-    def loadFrom(self,instancename, projectTitle):
-        print "workflowmgr: loadFrom not implemented"
-        pass
+
+    def loadFrom(self,wfRecord):
+        print "workflowmgr: loadFrom begin on record:",bson.json_util.dumps(wfRecord)
+        if wfRecord['name']:
+            self.workflowName = wfRecord['name']
+        for step in wfRecord["analyses"]:
+            print "found analysis:", step["name"]
+            self.addWorkstepToWorkflow(step["type"], step["name"])
+        for connection in wfRecord["connections"]:
+            print "found connection from:", connection["inputAnalysis"]
+        print "workflowmgr: loadFrom complete"
+        print "there are now",len(self.worksteps.keys()), " steps"
+
+
+    def serialize(self):
+        serializedict = dict()
+        serializedict['analyses']= []
+        serializedict['connections'] = []
+        serializedict['name']= self.workflowName
+        print 'serializing ',len(self.worksteps), ' steps'
+        for key in self.worksteps.keys():
+            step = self.worksteps[key]
+            stepattribs = dict()
+            stepattribs['name']=getattr(step,'name')
+            stepattribs['type']=getattr(step,'type')
+            print stepattribs
+            serializedict['analyses'].append(stepattribs)
+        return serializedict
+
 
     # --------
     # Several workflows are hand constructed in the methods below to serve as tests
     # --------
-   
+
     # single linear flow through two copy filters
     def buildworkflow1(self):
         source1 = ArborWorksteps.DatasetSourceWorkstep()
         source1.setName('source1')
         source1.setDatabaseName('arbor')
-        source1.setSourceCollectionName('analyses') 
+        source1.setSourceCollectionName('analyses')
         ws1 = ArborWorksteps.DatasetCopyWorkstep()
         ws1.setName('firststep')
         ws1.addInput(source1.getOutput())
@@ -142,14 +204,14 @@ class WorkflowManager:
         self.printWorkflow()
         self.executeWorkflow()
         self.printWorkflow()
-        
-        
-    # source feeeding a copy filter and a selection (awesomness > 0)        
+
+
+    # source feeeding a copy filter and a selection (awesomness > 0)
     def buildworkflow2(self):
         source1 = ArborWorksteps.DatasetSourceWorkstep()
         source1.setName('source1')
         source1.setDatabaseName('xdata')
-        source1.setSourceCollectionName('anolis_chars') 
+        source1.setSourceCollectionName('anolis_chars')
         ws1 = ArborWorksteps.DatasetCopyWorkstep()
         ws1.setName('firststep')
         ws1.addInput(source1.getOutput())
@@ -165,15 +227,15 @@ class WorkflowManager:
         ws2.addInput(ws1.getOutput())
         ws2.update()
         ws1.printSelf()
-        ws2.printSelf()        
+        ws2.printSelf()
 
     # interesection of two filters to pass only  0 < awesomness < 0.4
     def buildworkflow3(self):
         source1 = ArborWorksteps.DatasetSourceWorkstep()
         source1.setName('source1')
         source1.setDatabaseName('xdata')
-        source1.setSourceCollectionName('anolis_chars') 
-        
+        source1.setSourceCollectionName('anolis_chars')
+
         ws2 = ArborWorksteps.DatasetFilteringWorkstep()
         ws2.setName('awesomeGTzero')
         ws2.setProjectName('anolis')
@@ -182,7 +244,7 @@ class WorkflowManager:
         ws2.setFilterTest('GreaterThan')
         ws2.setFilterValue(0.0)
         ws2.addInput(source1.getOutput())
-        
+
         ws3 = ArborWorksteps.DatasetFilteringWorkstep()
         ws3.setName('awesomeLTfour')
         ws3.setProjectName('anolis')
@@ -190,9 +252,9 @@ class WorkflowManager:
         ws3.setFilterAttribute('awesomeness')
         ws3.setFilterTest('LessThan')
         ws3.setFilterValue(0.4)
-        ws3.addInput(ws2.getOutput())        
+        ws3.addInput(ws2.getOutput())
         ws3.update()
-        
+
         ws1 = ArborWorksteps.DatasetCopyWorkstep()
         ws1.setName('firststep')
         ws1.addInput(source1.getOutput())
@@ -200,15 +262,15 @@ class WorkflowManager:
         ws1.setProjectName('anolis')
 
         ws2.printSelf()
-        ws3.printSelf()        
+        ws3.printSelf()
 
-    # union operation 
+    # union operation
     def buildworkflow4(self):
         source1 = ArborWorksteps.DatasetSourceWorkstep()
         source1.setName('source1')
         source1.setDatabaseName('xdata')
-        source1.setSourceCollectionName('anolis_chars') 
-        
+        source1.setSourceCollectionName('anolis_chars')
+
         ws2 = ArborWorksteps.DatasetFilteringWorkstep()
         ws2.setName('awesomeGTone')
         ws2.setProjectName('anolis')
@@ -217,7 +279,7 @@ class WorkflowManager:
         ws2.setFilterTest('GreaterThan')
         ws2.setFilterValue(1.5)
         ws2.addInput(source1.getOutput())
-        
+
         ws3 = ArborWorksteps.DatasetFilteringWorkstep()
         ws3.setName('awesomeLTfour')
         ws3.setProjectName('anolis')
@@ -225,10 +287,10 @@ class WorkflowManager:
         ws3.setFilterAttribute('awesomeness')
         ws3.setFilterTest('LessThan')
         ws3.setFilterValue(-0.4)
-        ws3.addInput(source1.getOutput())    
+        ws3.addInput(source1.getOutput())
         # partial pipeline execution to see if it works
         #ws3.update()
-        
+
         ws1 = ArborWorksteps.DatasetCopyWorkstep()
         ws1.setName('union')
         ws1.addInput(ws2.getOutput())
@@ -236,7 +298,7 @@ class WorkflowManager:
         ws1.setDatabaseName('xdata')
         ws1.setProjectName('anolis')
         #ws1.update()
-        
+
         ws4 = ArborWorksteps.DatasetFilteringWorkstep()
         ws4.setName('notCuba')
         ws4.setProjectName('anolis')
@@ -244,9 +306,9 @@ class WorkflowManager:
         ws4.setFilterAttribute('island')
         ws4.setFilterTest('NotEqual')
         ws4.setFilterValue('Cuba')
-        ws4.addInput(ws1.getOutput())    
+        ws4.addInput(ws1.getOutput())
         #ws4.update()
-        
+
         ws5 = ArborWorksteps.DatasetFilteringWorkstep()
         ws5.setName('notHispaniolaOrCuba')
         ws5.setProjectName('anolis')
@@ -254,9 +316,9 @@ class WorkflowManager:
         ws5.setFilterAttribute('island')
         ws5.setFilterTest('NotEqual')
         ws5.setFilterValue('Hispaniola')
-        ws5.addInput(ws4.getOutput())    
+        ws5.addInput(ws4.getOutput())
         #ws5.update()
-        
+
         ws6 = ArborWorksteps.DatasetFilteringWorkstep()
         ws6.setName('occultus')
         ws6.setProjectName('anolis')
@@ -264,25 +326,25 @@ class WorkflowManager:
         ws6.setFilterAttribute('species')
         ws6.setFilterTest('Equal')
         ws6.setFilterValue('occultus')
-        ws6.addInput(ws5.getOutput())    
+        ws6.addInput(ws5.getOutput())
         ws6.update()
-        
+
         ws2.printSelf()
-        ws3.printSelf()  
+        ws3.printSelf()
         ws1.printSelf()
         ws4.printSelf()
         ws5.printSelf()
         ws6.printSelf()
 
-    # repeat test1 using the workflow manager api.   This isn't exactly the same as workflow 4. 
-    # one filter (notHispaniolaOrCuba) is not present here, because it isn't needed to show the 
+    # repeat test1 using the workflow manager api.   This isn't exactly the same as workflow 4.
+    # one filter (notHispaniolaOrCuba) is not present here, because it isn't needed to show the
     # API approach is working
 
     def buildworkflow4api(self):
         self.setDatabaseName('xdata')
         self.addWorkstepToWorkflow('DatasetSource','source1')
         self.setWorkstepParameter('source1','outputCollectionName','anolis_chars')
-        
+
         self.addWorkstepToWorkflow('DatasetFilter','awesomeGT_api')
         self.setWorkstepParameter('awesomeGT_api','filterAttribute','awesomeness')
         self.setWorkstepParameter('awesomeGT_api','limitValue',1.9)
@@ -291,7 +353,7 @@ class WorkflowManager:
 
         self.addWorkstepToWorkflow('DatasetFilter','awesomeLT_api')
         self.setWorkstepParameter('awesomeLT_api','filterAttribute','awesomeness')
-        self.setWorkstepParameter('awesomeLT_api','limitValue',-0.7)        
+        self.setWorkstepParameter('awesomeLT_api','limitValue',-0.7)
         self.setWorkstepParameter('awesomeLT_api','testType','LessThan')
         self.connectStepsInWorkflow('source1','awesomeLT_api','arbor.table')
 
@@ -301,16 +363,16 @@ class WorkflowManager:
 
         self.addWorkstepToWorkflow('DatasetFilter','notCuba_api')
         self.setWorkstepParameter('notCuba_api','filterAttribute','island')
-        self.setWorkstepParameter('notCuba_api','limitValue','Cuba')        
+        self.setWorkstepParameter('notCuba_api','limitValue','Cuba')
         self.setWorkstepParameter('notCuba_api','testType','NotEqual')
         self.connectStepsInWorkflow('union_api','notCuba_api','arbor.table')
 
         self.addWorkstepToWorkflow('DatasetFilter','occultus_api')
         self.setWorkstepParameter('occultus_api','filterAttribute','species')
-        self.setWorkstepParameter('occultus_api','limitValue','occultus')        
+        self.setWorkstepParameter('occultus_api','limitValue','occultus')
         self.setWorkstepParameter('occultus_api','testType','Equal')
         self.connectStepsInWorkflow('notCuba_api','occultus_api','arbor.table')
 
         self.executeWorkflow()
         self.printWorkflow()
-  
+
