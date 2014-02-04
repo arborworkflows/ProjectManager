@@ -661,7 +661,8 @@ class ArborFileManager:
         if u'datatypes' in project:
             projecttypes = project[u'datatypes']
             if u'Workflow' in projecttypes:
-                if instancename in project[u'Workflow']:
+                testProfile = {instancename : instancename }
+                if testProfile in project[u'Workflow']:
                     print "creating new workflow instance and loading it to run"
                     workflowMgr = ArborWorkflowManager.WorkflowManager()
                     workflowDescription = self.db[self.getWorkflowCollectionName(projectTitle)].find({'name':instancename})

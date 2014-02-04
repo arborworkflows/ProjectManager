@@ -73,6 +73,7 @@ class WorkflowManager:
             for case in switch(worksteptype):
                 if case('DatasetSource') or case('arbor.analysis.datasetsource'):
                     newStep = ArborWorksteps.DatasetSourceWorkstep()
+                    newStep.setSourceCollectionName('anolis.CharacterMatrix.anolis_chars')
                     foundMatch = True
                     break
                 if case('DatasetFilter') or case('arbor.analysis.datasetfilter'):
@@ -146,11 +147,25 @@ class WorkflowManager:
         for step in wfRecord["analyses"]:
             print "found analysis:", step["name"]
             self.addWorkstepToWorkflow(step["type"], step["name"])
+
+            # workstep specific parameters handled here for now.  This will be handled better when parsing
+            # is driven by the analysis spec
+
+            #for case in switch(step['type']):
+            #    if case('arbor.analysis.datasetsource'):
+            #        sourcepointer = self.worksteps[step['name']]
+            #        setattr(sourcepointer,'outputCollectionName',getattr(step,'outputCollectionName'))
+            #        break
+
         for connection in wfRecord["connections"]:
-            print "found connection from:", connection["inputAnalysis"]
+            print "found connection"
+            self.connectStepsInWorkflow(connection['output'], connection['input'], 'arbor.any')
         print "workflowmgr: loadFrom complete"
         print "there are now",len(self.worksteps.keys()), " steps"
 
+    # serialize the list of steps in this workflow along with the connection information.  Connectivity is hard
+    # to discover because it is represented implicitly through the addInput(getOutput()) assignments, so we have to
+    # peek into the 'inputs' field of each analysis and decide if there are any records there to stream out.
 
     def serialize(self):
         serializedict = dict()
@@ -158,13 +173,40 @@ class WorkflowManager:
         serializedict['connections'] = []
         serializedict['name']= self.workflowName
         print 'serializing ',len(self.worksteps), ' steps'
+        connectionlist = []
         for key in self.worksteps.keys():
             step = self.worksteps[key]
             stepattribs = dict()
             stepattribs['name']=getattr(step,'name')
             stepattribs['type']=getattr(step,'type')
+
+            # workstep specific parameters handled here for now.  This will be handled better when parsing
+            # is driven by the analysis spec
+
+            #for case in switch(getattr(step,'type')):
+            #    if case('arbor.analysis.datasetsource'):
+            #        stepattribs['outputCollectionName']=getattr(step,'outputCollectionName')
+            #        break
+
+            # if there is an input dataset feeding this workstep, record the connection:
+            # if this is a source object, it doesn't have an input field, so skip  looking for an input
+            if (getattr(step,'type') == "DatasetSource") or (getattr(step,"type") == 'arbor.analysis.datasetsource'):
+                pass
+            elif (len(getattr(step,'inputs')) > 0):
+                # this step has an input so find it and record the connection
+                for inputStep in getattr(step,'inputs'):
+                    thisConnect = dict()
+                    # return the name of the object referenced by the information object
+                    thisConnect['output'] = getattr(getattr(inputStep,'sourceObject'),'name')
+                    thisConnect['input'] = getattr(step,'name')
+                    connectionlist.append(thisConnect)
             print stepattribs
             serializedict['analyses'].append(stepattribs)
+        # only output an entry if there is a connection and traverse the list so each connection is in a flat
+        # list stored at the workflow level.
+        if (connectionlist) and (len(connectionlist) > 0):
+            for connection in connectionlist:
+                serializedict['connections'].append(connection)
         return serializedict
 
 

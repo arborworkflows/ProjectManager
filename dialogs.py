@@ -662,6 +662,7 @@ class NewWorkflowDialog(QDialog):
         self.newWfNameDialog = QLineEdit()
         self.newWorkflowButton = QPushButton("Create New Workflow")
         self.deleteWorkflowButton = QPushButton("Delete Workflow")
+        self.executeWorkflowButton = QPushButton("Execute Workflow")
 
         # 2nd column; list workstep types and name of new step dialog
         self.stepTypeLabel = QLabel("Workstep Types: ")
@@ -680,6 +681,8 @@ class NewWorkflowDialog(QDialog):
         self.outputOfListWidget.setMaximumHeight(200)
         self.outText2 = QLabel("select output:")
         self.outputSelectDialog = QLineEdit()
+
+        self.setStepParametersButton = QPushButton("Edit Workstep Parameters")
 
         self.inText1 = QLabel("to input of:")
         self.inText1.setMaximumHeight(40)
@@ -704,6 +707,7 @@ class NewWorkflowDialog(QDialog):
         self.vert_splitter.addWidget(self.newWfNameDialog)
         self.vert_splitter.addWidget(self.newWorkflowButton)
         self.vert_splitter.addWidget(self.deleteWorkflowButton)
+        self.vert_splitter.addWidget(self.executeWorkflowButton)
 
         self.vert_splitter2.addWidget(self.stepTypeLabel)
         self.vert_splitter2.addWidget(self.workstepListWidget)
@@ -713,13 +717,14 @@ class NewWorkflowDialog(QDialog):
 
         self.vert_splitter3.addWidget(self.outText1)
         self.vert_splitter3.addWidget(self.outputOfListWidget)
-        self.vert_splitter3.addWidget(self.outText2)
-        self.vert_splitter3.addWidget(self.outputSelectDialog)
+        self.vert_splitter3.addWidget(self.setStepParametersButton)
+        #self.vert_splitter3.addWidget(self.outText2)
+        #self.vert_splitter3.addWidget(self.outputSelectDialog)
 
         self.vert_splitter4.addWidget(self.inText1)
         self.vert_splitter4.addWidget(self.inputOfListWidget)
-        self.vert_splitter4.addWidget(self.inText2)
-        self.vert_splitter4.addWidget(self.inputSelectDialog)
+        #self.vert_splitter4.addWidget(self.inText2)
+        #self.vert_splitter4.addWidget(self.inputSelectDialog)
         self.vert_splitter4.addWidget(self.connectButton)
 
         self.button_splitter.addWidget(self.arborLogo)
@@ -739,19 +744,25 @@ class NewWorkflowDialog(QDialog):
         self.connectButton.clicked.connect(self.connectStuff)
         self.newWorkflowButton.clicked.connect(self.createNewWorkflow)
         self.deleteWorkflowButton.clicked.connect(self.deleteWorkflow)
+        self.executeWorkflowButton.clicked.connect(self.executeWorkflow)
         self.newWorkstepButton.clicked.connect(self.newWorkstepInWorkflow)
-        self.connectButton.clicked.connect(self.connectStuff)
         self.workflowListWidget.itemClicked.connect(self.selectWorkflowItem)
+
+        self.setStepParametersButton.clicked.connect(self.openWorkstepParametersDialog)
 
     def closeWorkflowDialog(self):
         self.hide()
 
+    def openWorkstepParametersDialog(self):
+        print "opening workstep parameters dialog here"
+
     def connectStuff(self):
+        print "** connect stuff **"
         projectTitle = self.api.getCurrentProjectName()
         wflowName = str(self.workflowListWidget.currentItem().text())
         outstep = str(self.outputOfListWidget.currentItem().text())
         instep = str(self.inputOfListWidget.currentItem().text())
-        self.api.connectStepsInWorkflow()
+        self.api.connectStepsInWorkflow(wflowName,outstep,instep,projectTitle)
 
     # the user clicked on a workflow, update the other UI elements to show info from the database
     # about this iteam
@@ -784,6 +795,14 @@ class NewWorkflowDialog(QDialog):
         projectTitle = self.api.getCurrentProjectName()
         wflowName = str(self.workflowListWidget.currentItem().text())
         self.api.deleteWorkflow(str(wflowName),projectTitle)
+        self.fillDialogs()
+
+    # add the record of a new workstep to the currently selected workflow
+    def executeWorkflow(self):
+        print "executing workflow"
+        projectTitle = self.api.getCurrentProjectName()
+        wflowName = str(self.workflowListWidget.currentItem().text())
+        self.api.executeWorkflowInProject(str(wflowName),projectTitle)
         self.fillDialogs()
 
 
