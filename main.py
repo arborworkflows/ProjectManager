@@ -79,7 +79,8 @@ class Form(QDialog):
         self.newCharacterButton = QPushButton("Load Character\nMatrix")
         self.newObservationsButton = QPushButton("Load Occurrences")
         self.newSequencesButton = QPushButton("Load Sequences")
-        self.newWorkflowButton = QPushButton("Open Workflow Dialog")
+        self.newWorkflowButton = QPushButton("Open Workflow\nDialog")
+        self.newWorkstepParametersButton = QPushButton("Adjust Workflow\n Parameters")
         self.changeDatabaseButton = QPushButton("Change Database Info")
 
         button_panel.addWidget(self.newProjectButton)
@@ -92,7 +93,7 @@ class Form(QDialog):
         button_panel2.addWidget(self.newObservationsButton)
         button_panel2.addWidget(self.newSequencesButton)
         button_panel2.addWidget(self.newWorkflowButton)
-        button_panel2.addWidget(self.newWorkflowButton)
+        button_panel2.addWidget(self.newWorkstepParametersButton)
         button_panel2.addWidget(self.changeDatabaseButton)
 
 
@@ -121,6 +122,7 @@ class Form(QDialog):
         self.newObservationsButton.clicked.connect(self.processNewObservationsButton)
         self.newSequencesButton.clicked.connect(self.processNewSequencesButton)
         self.newWorkflowButton.clicked.connect(self.processNewWorkflowButton)
+        self.newWorkstepParametersButton.clicked.connect(self.processNewWorkstepParametersButton)
         self.changeDatabaseButton.clicked.connect(self.processDatabaseChangeButton)
 
         # set callback so user clicking on a project displays project info
@@ -240,6 +242,9 @@ class Form(QDialog):
     def processNewWorkflowButton(self):
         dialogs.openNewWorkflowDialog()
 
+    def processNewWorkstepParametersButton(self):
+        dialogs.openWorkstepParametersDialog()
+
     def processDatabaseChangeButton(self):
         global api
         dialogs.openDatabaseChangeDialog()
@@ -251,6 +256,8 @@ class Form(QDialog):
 
     def processAlgorithmControlsButton(self):
         dialogs.openAlgorithmControlsDialog();
+
+
 
 if __name__ == '__main__':
     # Create the Qt Application

@@ -594,8 +594,8 @@ class ArborFileManager:
         print "collection to check:",collectionName
         return (self.db[collectionName].find({'name':workflowName}))[0]
 
-
-    def returnWorkflowRecordOld(self,workflowName,projectTitle):
+    # deprecated - remove soon?
+    def returnWorkflowRecordDeprecated(self,workflowName,projectTitle):
         # return a list of only the project names by using the $project operator in mongo.
         # pick the 'result' field from the query
         project = self.db[self.projectCollectionName].find_one({"name" : projectTitle})
@@ -633,6 +633,24 @@ class ArborFileManager:
             workflowMgr.setProjectName(projectTitle)
             workflowMgr.loadFrom(wfrecord)
             workflowMgr.addWorkstepToWorkflow(workStepType, stepName)
+            wfrecord = workflowMgr.serialize()
+            self.db[self.getWorkflowCollectionName(projectTitle)].update({'name':wflowName},wfrecord)
+        else:
+            print "attempt to add step to non-existant workflow"
+
+
+    # add a new workstep to the workflow.  We accomplish this by instantiating a workflow manager and having it
+    # add the step, then update the datbase again.  The format of workflows is encapsulated in the WorkflowManager.
+    # to keep the state saved in the database, workflow manager instances don't persist between API calls.
+
+    def updateWorkstepParameter(self,wflowName,stepName,parameterName,parameterValue,projectTitle):
+        wfrecord = self.returnWorkflowRecord(wflowName,projectTitle)
+        if (wfrecord != None) :
+            workflowMgr = ArborWorkflowManager.WorkflowManager()
+            workflowMgr.setDatabaseName(self.defaultMongoDatabase)
+            workflowMgr.setProjectName(projectTitle)
+            workflowMgr.loadFrom(wfrecord)
+            workflowMgr.updateParameterOfWorkstep(stepName,parameterName,parameterValue)
             wfrecord = workflowMgr.serialize()
             self.db[self.getWorkflowCollectionName(projectTitle)].update({'name':wflowName},wfrecord)
         else:

@@ -209,6 +209,12 @@ class WorkflowManager:
                 serializedict['connections'].append(connection)
         return serializedict
 
+    # add or update the value of a parameter attached to a workstep in this workflow.
+    # if there is no corresponding attribute, then it will be added.  If the parameter is
+    # already present, its value will be updated.
+    def updateParameterOfWorkstep(self,stepName,parameterName,parameterValue):
+        thisStep = self.worksteps[stepName]
+        setattr(thisStep,parameterName,parameterValue)
 
     # --------
     # Several workflows are hand constructed in the methods below to serve as tests

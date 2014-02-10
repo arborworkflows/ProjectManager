@@ -79,6 +79,8 @@ def initializeAllDialogs(arborAPI,algorithms):
     newDatabaseInfoDialogInstance = ChangeDatabaseDialog(arborAPI)
     global newAlgorithmControlsDialogInstance
     newAlgorithmControlsDialogInstance = NewAlgorithmControlsDialog(arborAPI,algorithms)
+    global newWorkstepParameterDialogInstance
+    newWorkstepParameterDialogInstance = NewWorkstepParametersDialog(arborAPI)
     if (arborAPI.getCurrentProjectName()):
         newAlgorithmControlsDialogInstance.setCurrentProjectName(arborAPI.getCurrentProjectName())
 
@@ -748,13 +750,12 @@ class NewWorkflowDialog(QDialog):
         self.newWorkstepButton.clicked.connect(self.newWorkstepInWorkflow)
         self.workflowListWidget.itemClicked.connect(self.selectWorkflowItem)
 
-        self.setStepParametersButton.clicked.connect(self.openWorkstepParametersDialog)
 
     def closeWorkflowDialog(self):
         self.hide()
 
-    def openWorkstepParametersDialog(self):
-        print "opening workstep parameters dialog here"
+    def openWorkstepParameterButton(self):
+        self.openNewWorkstepParametersDialog()
 
     def connectStuff(self):
         print "** connect stuff **"
@@ -839,3 +840,160 @@ def openNewWorkflowDialog():
     newWorkflowDialogInstance.fillDialogs()
     newWorkflowDialogInstance.show()
 
+#-----------------------------------------
+# workstep parameter options dialog
+#-----------------------------------------
+
+# pop up to interact with workflows inside a single project
+class NewWorkstepParametersDialog(QDialog):
+    # Define the  user interface for a new dialog to be created
+    def __init__(self, ArborAPI,parent=None):
+        super(NewWorkstepParametersDialog, self).__init__(parent)
+        self.api = ArborAPI
+        self.currentProjectName = ''
+        self.titleText = QLabel("Add a new workflow to the current project")
+
+        self.vert_splitter = QSplitter(Qt.Vertical, self)
+        self.vert_splitter2 = QSplitter(Qt.Vertical,self)
+        self.vert_splitter3 = QSplitter(Qt.Vertical,self)
+        #self.vert_splitter4 = QSplitter(Qt.Vertical,self)
+        self.button_splitter = QSplitter(Qt.Vertical,self)
+
+       # left column (existing wflows and the worksteps in the flow
+
+        self.titleText2 = QLabel("Existing workflows:")
+        self.workflowListWidget = QListWidget(self)
+        self.stepTypeLabel = QLabel("Worksteps: ")
+        self.stepTypeLabel.setMaximumHeight(40)
+        self.workstepListWidget = QListWidget(self)
+        self.workstepListWidget.setObjectName("workstepListWidget")
+
+        # 2nd column; list parameter name and value
+        self.parameterNameText = QLabel("Parameter Name:")
+        self.parameterNameDialog = QLineEdit()
+        self.numericValueText = QLabel("Numeric Value:")
+        self.numericValueDialog = QLineEdit()
+        self.addNumericParameterButton = QPushButton("Add Numeric Parameter")
+        self.stringValueText = QLabel("String Parameter:")
+        self.stringValueText.setMaximumHeight(40)
+        self.stringValueDialog = QLineEdit()
+        self.addStringParameterButton = QPushButton("Add String Parameter")
+
+        # show the already defined parameters
+        self.outText1 = QLabel("Defined Parameters:")
+        self.outText1.setMaximumHeight(40)
+        self.definedParametersListWidget = QListWidget(self)
+        self.definedParametersListWidget.setMaximumHeight(200)
+
+        #put up a logo
+        pm = QPixmap("Arbor_128px.png")
+        self.arborLogo = QLabel()
+        self.arborLogo.setPixmap(pm);
+        self.arborLogo.setAlignment(Qt.AlignCenter)
+
+        self.cancelButton = QPushButton("Close Window")
+
+
+        # lay out the elements in the dialog panel
+        self.vert_splitter.addWidget(self.titleText2)
+        self.vert_splitter.addWidget(self.workflowListWidget)
+        self.vert_splitter.addWidget(self.stepTypeLabel)
+        self.vert_splitter.addWidget(self.workstepListWidget)
+
+        self.vert_splitter2.addWidget(self.parameterNameText)
+        self.vert_splitter2.addWidget(self.parameterNameDialog)
+        self.vert_splitter2.addWidget(self.numericValueText)
+        self.vert_splitter2.addWidget(self.numericValueDialog)
+        self.vert_splitter2.addWidget(self.addNumericParameterButton)
+        self.vert_splitter2.addWidget(self.stringValueText)
+        self.vert_splitter2.addWidget(self.stringValueDialog)
+        self.vert_splitter2.addWidget(self.addStringParameterButton)
+
+        self.vert_splitter3.addWidget(self.outText1)
+        self.vert_splitter3.addWidget(self.definedParametersListWidget)
+
+        self.button_splitter.addWidget(self.arborLogo)
+        self.button_splitter.addWidget(self.cancelButton)
+
+        self.layout = QHBoxLayout()
+        #self.layout.addWidget(self.arborLogo)
+        self.layout.addWidget(self.vert_splitter)
+        self.layout.addWidget(self.vert_splitter2)
+        self.layout.addWidget(self.vert_splitter3)
+        self.layout.addWidget(self.button_splitter)
+        self.setLayout(self.layout)
+
+        # connect statements to connect behaviors to events
+        self.cancelButton.clicked.connect(self.closeWorkstepParameterDialog)
+        self.addStringParameterButton.clicked.connect(self.addStringParameter)
+        self.addNumericParameterButton.clicked.connect(self.addNumericParameter)
+        self.workflowListWidget.itemClicked.connect(self.selectWorkflowItem)
+        self.workflowListWidget.itemClicked.connect(self.selectWorkflowItem)
+
+
+    def closeWorkstepParameterDialog(self):
+        self.hide()
+
+    def addStringParameter(self):
+        print "add string parameter"
+        projectTitle = self.api.getCurrentProjectName()
+        wflowName = str(self.workflowListWidget.currentItem().text())
+        thisStepName = str(self.workstepListWidget.currentItem().text())
+        parameterName = str(self.parameterNameDialog.text())
+        parameterValue = str(self.stringValueDialog.text())
+        self.api.updateWorkstepParameter(wflowName,thisStepName,parameterName,parameterValue,projectTitle)
+
+
+    def addNumericParameter(self):
+        print "add numeric parameter"
+
+    # the user clicked on a workflow, update the other UI elements to show info from the database
+    # about this iteam
+    def selectWorkflowItem(self):
+        projectTitle = self.api.getCurrentProjectName()
+        wflowName = str(self.workflowListWidget.currentItem().text())
+        print "looking up record for wf:",wflowName,"proj:",projectTitle
+        wflowRecord = self.api.returnWorkflowRecord(wflowName,projectTitle)
+        print wflowRecord
+        # fill the list of steps in this workflow
+        self.workstepListWidget.clear()
+        for step in wflowRecord['analyses']:
+            if step['name']:
+                self.workstepListWidget.addItem(step['name'])
+
+
+
+    # the user clicked on a workstep, update the other UI elements to show info from the database
+    # about this item
+    def selectWorkstepItem(self):
+        projectTitle = self.api.getCurrentProjectName()
+        wflowName = str(self.workflowListWidget.currentItem().text())
+        workStepType = str(self.workstepListWidget.currentItem().text())
+        print "changing parameter for:",workStepType
+        wflowRecord = self.api.returnWorkflowRecord(wflowName,projectTitle)
+        print wflowRecord
+        # fill the "output of" and "input of" list widgets since the user will want to
+        # connect the steps together
+        self.inputOfListWidget.clear()
+        self.outputOfListWidget.clear()
+        for step in wflowRecord['analyses']:
+            if step['name']:
+                self.inputOfListWidget.addItem(step['name'])
+                self.outputOfListWidget.addItem(step['name'])
+
+
+    def fillDialogs(self):
+        # get a record from the Arbor project and iterate through its workflows
+        self.workflowListWidget.clear()
+        project = self.api.getCurrentProjectName()
+        itemList = self.api.getListOfDatasetsByProjectAndType(project,"Workflow")
+        for j in range(0,len(itemList)):
+            self.workflowListWidget.addItem(itemList[j])
+
+
+def openWorkstepParametersDialog():
+    global app
+    print "open new workstep parameters dialog"
+    global newWorkstepParametersDialogInstance
+    newWorkstepParameterDialogInstance.fillDialogs()
+    newWorkstepParameterDialogInstance.show()
