@@ -934,6 +934,11 @@ class NewWorkstepParametersDialog(QDialog):
     def closeWorkstepParameterDialog(self):
         self.hide()
 
+    # this method adds/updates a string parameter on a workstep inside the selected
+    # workflow.  The current selections for workflow and worksteps are read in order to
+    # decide which step to change.  The strings entered are processed with str() to convert
+    # them from QStrings to python strings before further proessing, as he API is pure python.
+
     def addStringParameter(self):
         print "add string parameter"
         projectTitle = self.api.getCurrentProjectName()

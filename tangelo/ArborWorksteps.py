@@ -42,6 +42,8 @@ class Workstep(object):
             self.name = 'default'
             self.projectName = 'default'
             self.modifiedTime = -9999
+            # added parameters array so can be serialized for all classes
+            self.parameters = dict()
 
         def setProjectName(self,projectname):
             self.projectName = projectname
@@ -51,6 +53,16 @@ class Workstep(object):
 
         def getProjectName(self):
             return self.projectName
+
+        # subclasses will have a variety of parameters, put them all in a named
+        # keystore for consistency.  This will enable serialization of all parameters to storage
+        def setParameter(self,parameterName,parameterValue):
+            self.parameters[parameterName] = parameterValue
+
+        # when a workstep is serialized from storage, all of its parameters are available in a single dict,
+        # so just asssign the
+        def setParameters(self,parameterDictionary):
+            self.parameters = parameterDictionary
 
         # method that is called to make sure the output of a workstep is current/
         # this method will contain whatever tests are needed to determine if the filter
@@ -73,6 +85,10 @@ class Workstep(object):
             # write output here
             pass
 
+# define a custom class for exceptions
+class WorkstepException(Exception):
+    def __init__(self,message):
+        Exception.__init__(self, message)
 
 # utility class to represent information about flows between worksteps.  It is expected that there will be a hierarchical
 # class definition of data types
@@ -128,7 +144,7 @@ class DatasetCopyWorkstep(Workstep):
             for thisInput in self.inputs:
                 print "      input: ",thisInput.sourceObject.name, " time: ",thisInput.sourceObject.modifiedTime
         else:
-            raise TypeError
+            raise WorkstepException("type mismatch at input of workstep "+self.name)
 
     # output the type and the collection value
     def getOutput(self):
@@ -198,16 +214,20 @@ class DatasetCopyWorkstep(Workstep):
             inputcoll = db[thisInput.collectionName]
             # find all documents in this input (repeated for each input)
             queryResults = inputcoll.find()
+            print "found that ", thisInput.collectionName," has ",queryResults.count(), " records"
             # write the documents into the output collection and indicate the output time changed
             for result in queryResults:
                 outputcoll.insert(result)
+            #  pause the writer enough to allow the write to complete? Found example code here:
+            #  http://sourceforge.net/u/rick446/random/ci/master/tree/lib.py
+            db.last_status()
         # rest the filter's modified time and assign it to the output object
         self.outputInformation.modifiedTime = self.modifiedTime = time.time()
         connection.close()
 
-
 # This workstep functions as a source that reads a collection and outputs the collection
-# data when connected as the source of a pipeline
+# data when connected as the source of a pipeline.  It has one parameter, which is the name of the
+# dataset (stored in a mongo collection) to be steamed out from this workstep.
 
 class DatasetSourceWorkstep(Workstep):
     def __init__(self):
@@ -216,18 +236,20 @@ class DatasetSourceWorkstep(Workstep):
         self.type = "arbor.analysis.datasetsource"
         self.outputType = "data.arbor.any"
         self.databaseName = ''
-        self.outputCollectionName = ''
         self.outputs = []
+        # setup the parameter for this filter with a enpty dataset name
+        self.parameters['dataset'] = ''
 
     def setSourceCollectionName(self,collectionName):
-         self.outputCollectionName = collectionName
+        self.parameters['dataset'] = collectionName
+
 
     # utility class to create unique collection names for worksteps within workflows.
     def getOutputCollectionNameForWorkstep(self):
-        if (self.outputCollectionName != ''):
-            return self.outputCollectionName
+        if (self.parameters['dataset'] != ''):
+            return self.parameters['dataset']
         else:
-            raise ValueError
+            raise WorkstepException("unspecified dataset on Dataset Source workstep")
 
     # set the database to read/write to
     def setDatabaseName(self,dbname):
@@ -242,8 +264,7 @@ class DatasetSourceWorkstep(Workstep):
         outinfo = WorkstepInformationObject()
         outinfo.type = self.outputType
         outinfo.sourceObject = self
-        self.outputCollectionName = self.getOutputCollectionNameForWorkstep()
-        outinfo.collectionName = self.outputCollectionName
+        outinfo.collectionName = self.getOutputCollectionNameForWorkstep()
         outinfo.modifiedTime = time.time()
         return outinfo
 

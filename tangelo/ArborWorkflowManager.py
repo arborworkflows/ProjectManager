@@ -61,8 +61,39 @@ class WorkflowManager:
             return False
         return True
 
-    # initialize the correct type of worktep, depending on the user's input
-    def addWorkstepToWorkflow(self,worksteptype, workstepname):
+#     # initialize the correct type of worktep, depending on the user's input
+#     def addWorkstepToWorkflow(self,worksteptype, workstepname):
+#         print "preparing to add step type of",worksteptype," named ",workstepname
+#         # add test to see if we already have a workstep by this name
+#         if workstepname in self.worksteps:
+#             print "another workstep with the name ",workstepname ,"already exists in this workflow"
+#             raise TypeError
+#         else:
+#             foundMatch = False
+#             for case in switch(worksteptype):
+#                 if case('DatasetSource') or case('arbor.analysis.datasetsource'):
+#                     newStep = ArborWorksteps.DatasetSourceWorkstep()
+#                     newStep.setSourceCollectionName('anolis.CharacterMatrix.anolis_chars')
+#                     foundMatch = True
+#                     break
+#                 if case('DatasetFilter') or case('arbor.analysis.datasetfilter'):
+#                     newStep = ArborWorksteps.DatasetFilteringWorkstep()
+#                     foundMatch = True
+#                     break
+#                 if case('DatasetCopy') or case('arbor.analysis.datasetcopy'):
+#                     newStep = ArborWorksteps.DatasetCopyWorkstep()
+#                     foundMatch = True
+#                     break
+#             if foundMatch:
+#                 print "creating step ",workstepname
+#                 newStep.setName(workstepname)
+#                 newStep.setDatabaseName(self.databaseName)
+#                 newStep.setProjectName(self.projectName)
+#                 self.worksteps[workstepname] = newStep
+#                 print "there are now",len(self.worksteps.keys()), " steps"
+
+    # initialize the correct type of workstep, depending on the user's input
+    def addWorkstepWithParametersToWorkflow(self,worksteptype, workstepname,parameters):
         print "preparing to add step type of",worksteptype," named ",workstepname
         # add test to see if we already have a workstep by this name
         if workstepname in self.worksteps:
@@ -73,7 +104,6 @@ class WorkflowManager:
             for case in switch(worksteptype):
                 if case('DatasetSource') or case('arbor.analysis.datasetsource'):
                     newStep = ArborWorksteps.DatasetSourceWorkstep()
-                    newStep.setSourceCollectionName('anolis.CharacterMatrix.anolis_chars')
                     foundMatch = True
                     break
                 if case('DatasetFilter') or case('arbor.analysis.datasetfilter'):
@@ -89,8 +119,11 @@ class WorkflowManager:
                 newStep.setName(workstepname)
                 newStep.setDatabaseName(self.databaseName)
                 newStep.setProjectName(self.projectName)
+                newStep.setParameters(parameters)
                 self.worksteps[workstepname] = newStep
                 print "there are now",len(self.worksteps.keys()), " steps"
+                newStep.printSelf()
+
 
     # set a parameter in a workstep.  This violates information hiding at the workstep level,
     #  but avoids the need for parameter setting machinery for now..
@@ -146,16 +179,7 @@ class WorkflowManager:
             self.workflowName = wfRecord['name']
         for step in wfRecord["analyses"]:
             print "found analysis:", step["name"]
-            self.addWorkstepToWorkflow(step["type"], step["name"])
-
-            # workstep specific parameters handled here for now.  This will be handled better when parsing
-            # is driven by the analysis spec
-
-            #for case in switch(step['type']):
-            #    if case('arbor.analysis.datasetsource'):
-            #        sourcepointer = self.worksteps[step['name']]
-            #        setattr(sourcepointer,'outputCollectionName',getattr(step,'outputCollectionName'))
-            #        break
+            self.addWorkstepWithParametersToWorkflow(step["type"], step["name"], step['parameters'])
 
         for connection in wfRecord["connections"]:
             print "found connection"
@@ -182,11 +206,7 @@ class WorkflowManager:
 
             # workstep specific parameters handled here for now.  This will be handled better when parsing
             # is driven by the analysis spec
-
-            #for case in switch(getattr(step,'type')):
-            #    if case('arbor.analysis.datasetsource'):
-            #        stepattribs['outputCollectionName']=getattr(step,'outputCollectionName')
-            #        break
+            stepattribs['parameters']=getattr(step,'parameters')
 
             # if there is an input dataset feeding this workstep, record the connection:
             # if this is a source object, it doesn't have an input field, so skip  looking for an input
@@ -214,7 +234,8 @@ class WorkflowManager:
     # already present, its value will be updated.
     def updateParameterOfWorkstep(self,stepName,parameterName,parameterValue):
         thisStep = self.worksteps[stepName]
-        setattr(thisStep,parameterName,parameterValue)
+        #setattr(thisStep,parameterName,parameterValue)
+        thisStep.setParameter(parameterName,parameterValue)
 
     # --------
     # Several workflows are hand constructed in the methods below to serve as tests

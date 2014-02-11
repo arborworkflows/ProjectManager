@@ -683,7 +683,10 @@ class ArborFileManager:
                 if testProfile in project[u'Workflow']:
                     print "creating new workflow instance and loading it to run"
                     workflowMgr = ArborWorkflowManager.WorkflowManager()
-                    workflowDescription = self.db[self.getWorkflowCollectionName(projectTitle)].find({'name':instancename})
+                    # mongo always returns a list of dictionaries, since this is a singleton, pass the first one to the load
+                    workflowDescription = self.db[self.getWorkflowCollectionName(projectTitle)].find({'name':instancename})[0]
+                    workflowMgr.setDatabaseName(self.defaultMongoDatabase)
+                    workflowMgr.setProjectName(projectTitle)
                     workflowMgr.loadFrom(workflowDescription)
                     workflowMgr.executeWorkflow()
 
