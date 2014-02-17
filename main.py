@@ -12,10 +12,6 @@ from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from PyQt4 import QtDeclarative
 
-# append path so modules defined in the tangelo subdirectory can be discovered
-sys.path.append("tangelo")
-from GlobalDefinitions import *
-
 global api
 global newAlgorithmControlsDialogInstance
 

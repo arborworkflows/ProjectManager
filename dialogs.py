@@ -8,10 +8,7 @@ from PyQt4 import QtDeclarative
 import sys
 sys.path.append("tangelo")
 
-from GlobalDefinitions import *
-
 from ArborAlgorithmManagerAPI import ArborAlgorithmManager
-
 
 # test to see if a variable can be expressed as a continous numeric value. This
 # test is used when displaying the character names, so the user knows if they are

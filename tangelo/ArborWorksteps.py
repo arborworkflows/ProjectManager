@@ -5,9 +5,6 @@ Created on Thu Dec 19 09:00:25 2013
 @author: clisle
 """
 
-# defined global variables
-from GlobalDefinitions import *
-
 import pymongo
 from bson import ObjectId
 from pymongo import Connection

@@ -9,7 +9,6 @@ from ArborWorksteps import switch
 
 import bson.json_util
 
-from GlobalDefinitions import *
 
 class WorkflowManager:
     def __init__(self):
@@ -19,12 +18,6 @@ class WorkflowManager:
         self.databaseName = 'arbor'
         self.projectName = 'workflows'
         self.arbor_workstep_dictionary = dict()
-        self.algorithmsDefined = False
-        # this workflow manager might be started with algorithms defined, so worksteps involving
-        # Arbor algorithms can be executed, if so save the pointer
-        if algorithms != None:
-            self.algorithmManager = algorithms
-            self.algorithmsDefined = True
 
         # keep a list of all steps where output is used by another step, these are internal
         # nodes and will be executed implicitly
