@@ -8,6 +8,8 @@ from PyQt4 import QtDeclarative
 import sys
 sys.path.append("tangelo")
 
+from GlobalDefinitions import *
+
 from ArborAlgorithmManagerAPI import ArborAlgorithmManager
 
 
@@ -72,7 +74,7 @@ def initializeAllDialogs(arborAPI,algorithms):
     global newSequenceDialogInstance
     newSequenceDialogInstance = NewSequenceDialog(arborAPI)
     global newWorkflowDialogInstance
-    newWorkflowDialogInstance = NewWorkflowDialog(arborAPI)
+    newWorkflowDialogInstance = NewWorkflowDialog(arborAPI,algorithms)
     global newOpenTreeOfLifeDialogInstance
     newOpenTreeOfLifeDialogInstance = NewOpenTreeOfLifeDialog(arborAPI)
     global newDatabaseInfoDialogInstance
@@ -469,7 +471,7 @@ def openNewTreeOfLifeDialog():
     newOpenTreeOfLifeDialogInstance.show()
 
 
-     #----------------
+#----------------
 
 
 # pop up to load a tree from the Open Tree of Life Project
@@ -644,9 +646,10 @@ def changeCurrentProject(prname):
 # pop up to load a tree from the Open Tree of Life Project
 class NewWorkflowDialog(QDialog):
     # Define the  user interface for a new dialog to be created
-    def __init__(self, ArborAPI,parent=None):
+    def __init__(self, ArborAPI,AlgorithmAPI,parent=None):
         super(NewWorkflowDialog, self).__init__(parent)
         self.api = ArborAPI
+        self.algorithms = AlgorithmAPI
         self.currentProjectName = ''
         self.titleText = QLabel("Add a new workflow to the current project")
 
@@ -789,7 +792,8 @@ class NewWorkflowDialog(QDialog):
         stepName = str(self.newStepNameDialog.text())
         wflowName = str(self.workflowListWidget.currentItem().text())
         self.api.newWorkstepInWorkflow(str(wflowName),str(workStepType),str(stepName),projectTitle)
-        self.fillDialogs()
+        # rerender the input/output lists so the new step shows up
+        self.selectWorkflowItem()
 
     # add the record of a new workstep to the currently selected workflow
     def deleteWorkflow(self):
@@ -803,7 +807,8 @@ class NewWorkflowDialog(QDialog):
         print "executing workflow"
         projectTitle = self.api.getCurrentProjectName()
         wflowName = str(self.workflowListWidget.currentItem().text())
-        self.api.executeWorkflowInProject(str(wflowName),projectTitle)
+        # execute workflow, delete intermediate steps, pass algorithms in for execution
+        self.api.executeWorkflowInProject(str(wflowName),projectTitle,True,self.algorithms)
         self.fillDialogs()
 
 
@@ -893,7 +898,6 @@ class NewWorkstepParametersDialog(QDialog):
 
         self.cancelButton = QPushButton("Close Window")
 
-
         # lay out the elements in the dialog panel
         self.vert_splitter.addWidget(self.titleText2)
         self.vert_splitter.addWidget(self.workflowListWidget)
@@ -928,7 +932,7 @@ class NewWorkstepParametersDialog(QDialog):
         self.addStringParameterButton.clicked.connect(self.addStringParameter)
         self.addNumericParameterButton.clicked.connect(self.addNumericParameter)
         self.workflowListWidget.itemClicked.connect(self.selectWorkflowItem)
-        self.workflowListWidget.itemClicked.connect(self.selectWorkflowItem)
+        self.workstepListWidget.itemClicked.connect(self.selectWorkstepItem)
 
 
     def closeWorkstepParameterDialog(self):
@@ -947,10 +951,17 @@ class NewWorkstepParametersDialog(QDialog):
         parameterName = str(self.parameterNameDialog.text())
         parameterValue = str(self.stringValueDialog.text())
         self.api.updateWorkstepParameter(wflowName,thisStepName,parameterName,parameterValue,projectTitle)
-
+        self.fillWorkstepParametersDialog()
 
     def addNumericParameter(self):
         print "add numeric parameter"
+        projectTitle = self.api.getCurrentProjectName()
+        wflowName = str(self.workflowListWidget.currentItem().text())
+        thisStepName = str(self.workstepListWidget.currentItem().text())
+        parameterName = str(self.parameterNameDialog.text())
+        parameterValue = float(self.numericValueDialog.text())
+        self.api.updateWorkstepParameter(wflowName,thisStepName,parameterName,parameterValue,projectTitle)
+        self.fillWorkstepParametersDialog()
 
     # the user clicked on a workflow, update the other UI elements to show info from the database
     # about this iteam
@@ -966,25 +977,13 @@ class NewWorkstepParametersDialog(QDialog):
             if step['name']:
                 self.workstepListWidget.addItem(step['name'])
 
-
-
     # the user clicked on a workstep, update the other UI elements to show info from the database
     # about this item
     def selectWorkstepItem(self):
-        projectTitle = self.api.getCurrentProjectName()
-        wflowName = str(self.workflowListWidget.currentItem().text())
-        workStepType = str(self.workstepListWidget.currentItem().text())
-        print "changing parameter for:",workStepType
-        wflowRecord = self.api.returnWorkflowRecord(wflowName,projectTitle)
-        print wflowRecord
-        # fill the "output of" and "input of" list widgets since the user will want to
-        # connect the steps together
-        self.inputOfListWidget.clear()
-        self.outputOfListWidget.clear()
-        for step in wflowRecord['analyses']:
-            if step['name']:
-                self.inputOfListWidget.addItem(step['name'])
-                self.outputOfListWidget.addItem(step['name'])
+        self.numericValueDialog.clear()
+        self.stringValueDialog.clear()
+        self.parameterNameDialog.clear()
+        self.fillWorkstepParametersDialog()
 
 
     def fillDialogs(self):
@@ -994,6 +993,18 @@ class NewWorkstepParametersDialog(QDialog):
         itemList = self.api.getListOfDatasetsByProjectAndType(project,"Workflow")
         for j in range(0,len(itemList)):
             self.workflowListWidget.addItem(itemList[j])
+
+    def fillWorkstepParametersDialog(self):
+        projectTitle = self.api.getCurrentProjectName()
+        wflowName = str(self.workflowListWidget.currentItem().text())
+        thisStepName = str(self.workstepListWidget.currentItem().text())
+        print "retrieving parameters for:",thisStepName
+        parameters = self.api.returnWorkstepParameters(wflowName,thisStepName,projectTitle)
+        self.definedParametersListWidget.clear()
+        for param in parameters:
+            # build a string with the parameter name and value
+            paramString = param + ": " + str(parameters[param])
+            self.definedParametersListWidget.addItem(paramString)
 
 
 def openWorkstepParametersDialog():

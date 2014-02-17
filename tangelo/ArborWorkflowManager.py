@@ -9,14 +9,22 @@ from ArborWorksteps import switch
 
 import bson.json_util
 
+from GlobalDefinitions import *
 
 class WorkflowManager:
     def __init__(self):
+        global algorithms
         self.worksteps = dict()
         self.workflowName = 'default'
         self.databaseName = 'arbor'
         self.projectName = 'workflows'
         self.arbor_workstep_dictionary = dict()
+        self.algorithmsDefined = False
+        # this workflow manager might be started with algorithms defined, so worksteps involving
+        # Arbor algorithms can be executed, if so save the pointer
+        if algorithms != None:
+            self.algorithmManager = algorithms
+            self.algorithmsDefined = True
 
         # keep a list of all steps where output is used by another step, these are internal
         # nodes and will be executed implicitly
@@ -33,7 +41,9 @@ class WorkflowManager:
         self.arbor_workstep_list = [
             'DatasetSource',
             'DatasetFilter',
-            'DatasetCopy'
+            'DatasetCopy',
+            'SpecTableSource',
+            'FitContinuous'
         ]
 
     def returnListOfLoadedWorksteps(self):
@@ -62,35 +72,43 @@ class WorkflowManager:
         return True
 
 #     # initialize the correct type of worktep, depending on the user's input
-#     def addWorkstepToWorkflow(self,worksteptype, workstepname):
-#         print "preparing to add step type of",worksteptype," named ",workstepname
-#         # add test to see if we already have a workstep by this name
-#         if workstepname in self.worksteps:
-#             print "another workstep with the name ",workstepname ,"already exists in this workflow"
-#             raise TypeError
-#         else:
-#             foundMatch = False
-#             for case in switch(worksteptype):
-#                 if case('DatasetSource') or case('arbor.analysis.datasetsource'):
-#                     newStep = ArborWorksteps.DatasetSourceWorkstep()
-#                     newStep.setSourceCollectionName('anolis.CharacterMatrix.anolis_chars')
-#                     foundMatch = True
-#                     break
-#                 if case('DatasetFilter') or case('arbor.analysis.datasetfilter'):
-#                     newStep = ArborWorksteps.DatasetFilteringWorkstep()
-#                     foundMatch = True
-#                     break
-#                 if case('DatasetCopy') or case('arbor.analysis.datasetcopy'):
-#                     newStep = ArborWorksteps.DatasetCopyWorkstep()
-#                     foundMatch = True
-#                     break
-#             if foundMatch:
-#                 print "creating step ",workstepname
-#                 newStep.setName(workstepname)
-#                 newStep.setDatabaseName(self.databaseName)
-#                 newStep.setProjectName(self.projectName)
-#                 self.worksteps[workstepname] = newStep
-#                 print "there are now",len(self.worksteps.keys()), " steps"
+    def addWorkstepToWorkflow(self,worksteptype, workstepname):
+        print "preparing to add step type of",worksteptype," named ",workstepname
+        # add test to see if we already have a workstep by this name
+        if workstepname in self.worksteps:
+            print "another workstep with the name ",workstepname ,"already exists in this workflow"
+            raise TypeError
+        else:
+            foundMatch = False
+            for case in switch(worksteptype):
+                if case('DatasetSource') or case('arbor.analysis.datasetsource'):
+                    newStep = ArborWorksteps.DatasetSourceWorkstep()
+                    newStep.setSourceCollectionName('anolis.CharacterMatrix.anolis_chars')
+                    foundMatch = True
+                    break
+                if case('DatasetFilter') or case('arbor.analysis.datasetfilter'):
+                    newStep = ArborWorksteps.DatasetFilteringWorkstep()
+                    foundMatch = True
+                    break
+                if case('DatasetCopy') or case('arbor.analysis.datasetcopy'):
+                    newStep = ArborWorksteps.DatasetCopyWorkstep()
+                    foundMatch = True
+                    break
+                if case('SpecTableSource') or case('arbor.analysis.spectablesource'):
+                    newStep = ArborWorksteps.DatasetSpecTableSourceWorkstep()
+                    foundMatch = True
+                    break
+                if case('FitContinuous') or case('arbor.analysis.fitcontinuous'):
+                    newStep = ArborWorksteps.GeigerFitContinuousWorkstep()
+                    foundMatch = True
+                    break
+            if foundMatch:
+                print "creating step ",workstepname
+                newStep.setName(workstepname)
+                newStep.setDatabaseName(self.databaseName)
+                newStep.setProjectName(self.projectName)
+                self.worksteps[workstepname] = newStep
+                print "there are now",len(self.worksteps.keys()), " steps"
 
     # initialize the correct type of workstep, depending on the user's input
     def addWorkstepWithParametersToWorkflow(self,worksteptype, workstepname,parameters):
@@ -114,6 +132,14 @@ class WorkflowManager:
                     newStep = ArborWorksteps.DatasetCopyWorkstep()
                     foundMatch = True
                     break
+                if case('SpecTableSource') or case('arbor.analysis.spectablesource'):
+                    newStep = ArborWorksteps.DatasetSpecTableSourceWorkstep()
+                    foundMatch = True
+                    break
+                if case('FitContinuous') or case('arbor.analysis.geigerfitcontinuous'):
+                    newStep = ArborWorksteps.GeigerFitContinuousWorkstep()
+                    foundMatch = True
+                    break
             if foundMatch:
                 print "creating step ",workstepname
                 newStep.setName(workstepname)
@@ -134,6 +160,9 @@ class WorkflowManager:
         else:
             return False
 
+    # return the parameters of a currently loaded workstep, so they can be displayed or browsed through an interface
+    def returnWorkstepParameters(self,stepName):
+        return self.worksteps[stepName].parameters
 
     # connect an output of one step to the input of another.  The datatype is used
     # to determine the correct output/input combinations to connect
@@ -155,23 +184,40 @@ class WorkflowManager:
         except TypeError:
             print "workflow mgr: type mismatch between filters ",sourceStepName, " and ", destStepName
 
-    def executeWorkflow(self):
+    def executeWorkflow(self,algorithms=None):
         # look through the worksteps and fire off all the ones that are not in the internal step
         # list.  This will assure that all steps are executed without unnecessary repeat execution
         # of the internal steps.
         for step in self.worksteps:
             if not (step in self.internalSteps):
                 print "workflow mgr: executing step:",step
-                self.worksteps[step].update()
+
+                # some worksteps might use Arbor algorithms, so we need to pass a reference
+                # to the instantiated algorithms to the worksteps so algorithms can be executed
+
+                if algorithms != None:
+                    self.worksteps[step].update(algorithms)
+                else:
+                    self.worksteps[step].update()
 
     def printWorkflow(self):
         for step in self.worksteps:
             self.worksteps[step].printSelf()
 
-    def cleanupOutput(self):
-        # for all steps in workflow, query the output collection and drop it to clean
+    def cleanupInternalSteps(self):
+        # for all internal steps in this workflow,  drop the output collections to clean
         # out any intermediate results
-        pass
+        for stepname in self.internalSteps:
+            print "deleting output of step:",stepname
+            thisStep = self.worksteps[stepname]
+            thisStep.deleteOutput()
+
+    def cleanupAllSteps(self):
+        # for all steps in workflow, delete output
+        for stepname in self.worksteps:
+            print "deleting output of step:",stepname
+            thisStep = self.worksteps[stepname]
+            thisStep.deleteOutput()
 
     def loadFrom(self,wfRecord):
         print "workflowmgr: loadFrom begin on record:",bson.json_util.dumps(wfRecord)

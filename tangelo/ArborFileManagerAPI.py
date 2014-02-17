@@ -594,21 +594,21 @@ class ArborFileManager:
         print "collection to check:",collectionName
         return (self.db[collectionName].find({'name':workflowName}))[0]
 
-    # deprecated - remove soon?
-    def returnWorkflowRecordDeprecated(self,workflowName,projectTitle):
-        # return a list of only the project names by using the $project operator in mongo.
-        # pick the 'result' field from the query
-        project = self.db[self.projectCollectionName].find_one({"name" : projectTitle})
-        print "found project record: ", project
-        # some projects may not have dataypes yet, true during initial development at least
-        if u'datatypes' in project:
-            projecttypes = project[u'datatypes']
-            print "projecttypes=",projecttypes
-            if u'Workflow' in projecttypes:
-                print "workflows in this project:",project[u'Workflow']
-                if workflowName in project[u'Workflow']:
-                    print "found record of this workflow:",workflowName,"in project ",projectTitle
-                    workflowlist = self.db[self.getWorkflowCollectionName(projectTitle)].find({'name':workflowName})
+#     # deprecated - remove soon?
+#     def returnWorkflowRecordDeprecated(self,workflowName,projectTitle):
+#         # return a list of only the project names by using the $project operator in mongo.
+#         # pick the 'result' field from the query
+#         project = self.db[self.projectCollectionName].find_one({"name" : projectTitle})
+#         print "found project record: ", project
+#         # some projects may not have dataypes yet, true during initial development at least
+#         if u'datatypes' in project:
+#             projecttypes = project[u'datatypes']
+#             print "projecttypes=",projecttypes
+#             if u'Workflow' in projecttypes:
+#                 print "workflows in this project:",project[u'Workflow']
+#                 if workflowName in project[u'Workflow']:
+#                     print "found record of this workflow:",workflowName,"in project ",projectTitle
+#                     workflowlist = self.db[self.getWorkflowCollectionName(projectTitle)].find({'name':workflowName})
 
         # nothing was found, so return empty
         return None
@@ -656,6 +656,22 @@ class ArborFileManager:
         else:
             print "attempt to add step to non-existant workflow"
 
+   # add a new workstep to the workflow.  We accomplish this by instantiating a workflow manager and having it
+    # add the step, then update the datbase again.  The format of workflows is encapsulated in the WorkflowManager.
+    # to keep the state saved in the database, workflow manager instances don't persist between API calls.
+
+    def returnWorkstepParameters(self,wflowName,stepName,projectTitle):
+        wfrecord = self.returnWorkflowRecord(wflowName,projectTitle)
+        if (wfrecord != None) :
+            workflowMgr = ArborWorkflowManager.WorkflowManager()
+            workflowMgr.setDatabaseName(self.defaultMongoDatabase)
+            workflowMgr.setProjectName(projectTitle)
+            workflowMgr.loadFrom(wfrecord)
+            parameters = workflowMgr.returnWorkstepParameters(stepName)
+            return parameters
+        else:
+            print "attempt to explore non-existant workflow"
+
     # connect the output of one analysis to the input of another analysis.  The initial ones didn't have
     # multiple outputs, so this interface needs to be extended.
     def connectStepsInWorkflow(self,wflowName,outStepName,inStepName,projectTitle):
@@ -673,7 +689,7 @@ class ArborFileManager:
 
 
     # read a workflow out of the database and execute it
-    def executeWorkflowInProject(self,instancename,projectTitle):
+    def executeWorkflowInProject(self,instancename,projectTitle,deleteIntermediateSteps=True,algorithms=None):
         # if the workflow is defined, create new workflow manager instance, and load from the datastore record
         project = self.db[self.projectCollectionName].find_one({"name" : projectTitle})
         if u'datatypes' in project:
@@ -688,7 +704,10 @@ class ArborFileManager:
                     workflowMgr.setDatabaseName(self.defaultMongoDatabase)
                     workflowMgr.setProjectName(projectTitle)
                     workflowMgr.loadFrom(workflowDescription)
-                    workflowMgr.executeWorkflow()
+                    workflowMgr.executeWorkflow(algorithms)
+                    # delete output from intermediate steps if default or user-specified behavior says to
+                    if deleteIntermediateSteps:
+                        workflowMgr.cleanupInternalSteps()
 
     def returnListOfLoadedWorksteps(self):
         wfm =  ArborWorkflowManager.WorkflowManager()
