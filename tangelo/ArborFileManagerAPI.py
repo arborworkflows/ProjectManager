@@ -21,6 +21,7 @@ Requirements:
 import pymongo
 from bson import ObjectId
 from pymongo import Connection
+from pymongo import MongoClient
 import json
 import bson.json_util
 import csv
@@ -32,22 +33,11 @@ import urllib2
 # used to parse analysis names from our list of collections
 import re
 
+# used to check environment variables
+import os
+
 import sys
 sys.path.append("tangelo")
-
-# import the recursive algorithm to process phyloXML records and create a mongo collection
-#import phyloimport_algorithm
-
-# import the algorithm to add a root to unrooted trees
-#import root_phylotree_algorithm
-
-import ArborAlgorithmManagerAPI
-
-
-import phyloimport_algorithm
-import phyloexport_algorithm
-
-import root_phylotree_algorithm
 
 # parser routine for PhyloXML
 from Bio import Phylo
@@ -163,8 +153,17 @@ class ArborFileManager:
         # multiple backing databases might be in use.  Don't leave stranded connections.
         if (getattr(self,'connection',False)):
             self.connection.close()
-        self.connection = Connection(self.defaultMongoHost, self.defaultMongoPort)
-        self.db = self.connection[self.defaultMongoDatabase]
+
+        # special case for Heroku environment
+        if 'MONGOLAB_URI' in os.environ:
+            mongo_uri = os.environ['MONGOLAB_URI']
+            other_part, sep, mongo_db = mongo_uri.rpartition('/')
+            self.connection = MongoClient(mongo_uri)
+            self.db = self.connection[mongo_db]
+        else:
+            self.connection = Connection(self.defaultMongoHost, self.defaultMongoPort)
+            self.db = self.connection[self.defaultMongoDatabase]
+
         # if there is a GUI, its project list needs to be updated because of the change in
         # the backing store for the API.
         print "changed database"
@@ -267,6 +266,8 @@ class ArborFileManager:
 
     # Convert dataset to a text string
     def getDatasetAsTextString(self,projectName,datatypeName, datasetName,stringFormat):
+        import phyloexport_algorithm
+
         outputString = None
         collectionName = self.returnCollectionForObjectByName(projectName,datatypeName, datasetName)
         datasetCollection = self.db[collectionName]
@@ -342,6 +343,8 @@ class ArborFileManager:
 
     # add a tree to the project
     def newTreeInProject(self,treename,treefile,projectTitle, treetype):
+        import phyloimport_algorithm, root_phylotree_algorithm
+
         collectionName = self.prefixString+projectTitle+self.separatorString+"PhyloTree"+self.separatorString+treename
         treeCollection = self.db[collectionName]
         print "uploading tree to collection: ",collectionName
@@ -359,6 +362,8 @@ class ArborFileManager:
 
     # add a tree to the project
     def newTreeInProjectFromString(self,treename,treestring,projectTitle, description,treetype):
+        import phyloimport_algorithm, root_phylotree_algorithm
+
         collectionName = self.prefixString+projectTitle+self.separatorString+"PhyloTree"+self.separatorString+treename
         treeCollection = self.db[collectionName]
         treeCollection.drop()
