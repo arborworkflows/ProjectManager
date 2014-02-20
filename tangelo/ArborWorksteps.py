@@ -557,6 +557,10 @@ class GeigerFitContinuousWorkstep(DatasetCopyWorkstep):
                 print "fitContinuous: found selected character defined as: ",self.parameters['character']
                 print "fitContinuous: found outputTree defined as: ",self.parameters['outputTree']
 
+                algorithms = QtArborAlgorithmManager()
+                algorithms.setProjectManagerAPI(api)
+                algorithms.initAlgorithmLibrary()
+                
                 # only attempt to run the analysis if the algorithm subsystem is defined. This relies
                 # on the global algorithms definition
                 if algorithmSubsystem != None:

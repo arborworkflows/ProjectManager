@@ -74,7 +74,7 @@ def get(*pargs, **query_args):
         if len(pargs) == 2:
                 project = pargs[1]
                 workflowName = pargs[2]
-                return api.getStatusOfWorkflow(workflowName,project)
+                return bson.json_util.dumps(api.getStatusOfWorkflow(workflowName,project))
     else:
         return tangelo.HTTPStatusCode(400, "Bad resource type '%s' - allowed types are: %s" % (resource_type, ", ".join(allowed)))
 
@@ -84,7 +84,9 @@ def get(*pargs, **query_args):
 
 @tangelo.restful
 def put(resource, projname, datasetname=None, data=None, filename=None, filetype=None,
-            workflowName = None, stepName=None, inputStepName=None, outputStepName=None, operation=None, flowType=None, **kwargs):
+            workflowName = None, stepName=None, stepType=None, inputStepName=None, outputStepName=None,
+            inPortName=None,outPortName=None,operation=None, parameterName=None, parameterValue=None,
+            parameterValueNumber=None,flowType=None,dataType=None, **kwargs):
     if (resource != "project") and (resource != "workflow"):
         return tangelo.HTTPStatusCode(400, "Bad resource type '%s' - allowed types are: project")
     if resource == "project":
@@ -106,8 +108,10 @@ def put(resource, projname, datasetname=None, data=None, filename=None, filetype
             # user wants to upload a tree or a character matrix
             if filetype == "newick" or filetype == "phyloxml":
                 api.newTreeInProjectFromString(datasetname, data, projname, filename, filetype)
-            if filetype == "csv":
+            if (filetype == "csv" and dataType is None) or (filetype == "csv" and dataType=='CharacterMatrix'):
                 api.newCharacterMatrixInProjectFromString(datasetname, data, projname, filename)
+            if filetype == "csv" and dataType=="Occurrences":
+                api.newOccurrencesInProjectFromString(datasetname, data, projname)
 
     # workflow creation
     #  arborapi: /workflow/projname/workflowname - creates new empty workflow
@@ -117,9 +121,23 @@ def put(resource, projname, datasetname=None, data=None, filename=None, filetype
             if operation == "newWorkflow":
                 api.newWorkflowInProject(workflowName, projname)
             if operation == "newWorkstepInWorkflow":
-                    api.newWorkstepInWorkflow(workflowName, stepName, projname)
-            if operation == "status":
-                    api.getStatusOfWorkflow(workflowName,projname)
+                    api.newWorkstepInWorkflow(workflowName, stepType, stepName, projname)
+
+            # allow user to add a parameter to a workstep or update the value of the parameter. There
+            # is currently a limitation that all values are strings, e.g. "2.4" instead of 2.4.
+
+            if operation == "updateWorkstepParameter":
+                # if a float argument is sent, use this as the value for the parameter, instead of the
+                # string.  A conversion is done to float to assure numberic values
+                if parameterValueNumber != None:
+                    print "found number filter value"
+                    parameterValue = float(parameterValueNumber)
+                api.updateWorkstepParameter(workflowName, stepName, parameterName, parameterValue, projname)
+            if operation == "connectWorksteps":
+                #api.connectStepsInWorkflow(workflowName,outStepName,outPortName,inStepName,inPortName,projname)
+                api.connectStepsInWorkflow(workflowName,outputStepName,inputStepName,projname)
+            if operation == "executeWorkflow":
+                api.executeWorkflowInProject(workflowName,projname)
 
     return "OK"
 

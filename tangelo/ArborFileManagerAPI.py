@@ -166,7 +166,7 @@ class ArborFileManager:
 
         # if there is a GUI, its project list needs to be updated because of the change in
         # the backing store for the API.
-        print "changed database"
+
         if (self.QtGuiEnabled):
             self.projectListChangedSignal.emit()
 
@@ -247,16 +247,24 @@ class ArborFileManager:
                     # each dataset name is the key in a dictionary.  We can
                     # assume there is only one key in the dictionary since each
                     # dataset has its own dict
-                    collectionName = self.prefixString+projectName+self.separatorString+datatype+self.separatorString+datasetlist[i].keys()[0]
+                    #collectionName = self.prefixString+projectName+self.separatorString+datatype+self.separatorString+datasetlist[i].keys()[0]
+                    collectionName = self.returnCollectionForObjectByName(projectName, datatype, datasetlist[i].keys()[0])
                     print "deleting dataset: ",collectionName
                     self.db.drop_collection(collectionName)
-        # now remove the project record from the projects collection
+        # now remove the project record from the projects collection]
         result = self.db[self.projectCollectionName].remove({ 'name' : projectName})
         return result
 
     # we might change the naming algorithm later, so lets use this method to lookup the names
+    # 2/18/13 - we did change the algorithm.  Adding a supertype of "Table" that applies to both
+    # character matrices and occurrences
+
     def returnCollectionForObjectByName(self,projectName,datatypeName, datasetName):
-        collectionName = self.prefixString+projectName+self.separatorString+datatypeName+self.separatorString+datasetName
+        if datatypeName in ['CharacterMatrix','Occurrences','Result']:
+            datatypeToUse = 'Table'
+        else:
+            datatypeToUse = datatypeName
+        collectionName = self.prefixString+projectName+self.separatorString+datatypeToUse+self.separatorString+datasetName
         return collectionName
 
     # similar to above, but for analyses
@@ -294,8 +302,8 @@ class ArborFileManager:
         print "removing dataset from project named: ",projectName
         project = self.db[self.projectCollectionName].find_one({"name" : projectName})
 
-        # first drop the dataset collections.  Do this by looking through all
-        # the datatypes this project has and deleting all instances of any type
+        # first drop the dataset collection.  Do this by looking through the project
+        # and removing the instances of this dataset
         typelist = self.getListOfTypesForProject(projectName)
         if datatypeName in typelist:
             datasetlist = project[datatypeName]
@@ -305,21 +313,31 @@ class ArborFileManager:
                     # each dataset name is the key in a dictionary.  We can
                     # assume there is only one key in the dictionary since each
                     # dataset has its own dict
-                    collectionName = self.prefixString+projectName+self.separatorString+datatypeName+self.separatorString+datasetlist[i].keys()[0]
+                    collectionName = self.returnCollectionForObjectByName(projectName,datatypeName,datasetName)
+                    #collectionName = self.prefixString+projectName+self.separatorString+datatypeName+self.separatorString+datasetlist[i].keys()[0]
                     print "deleting dataset named: ",datasetName, " in collection:",collectionName
                     # remove the corresponding entry from the list to delete the reference to the dataset
                     datasetlist.pop(i)
                     # now push the changed dictionary back out to update the project record
                     self.db[self.projectCollectionName].save(project)
-                    # delete the dataset itself by dropping the whole collection
+                    # delete the dataset itself by dropping the whole collection.
                     result = self.db.drop_collection(collectionName)
-            if len(datasetlist) == 0:
-                # we deleted the last entry of this type, so delete the type from the datatypes list
-                typelist = project[u'datatypes']
-                for i in range(0,len(typelist)):
-                    if typelist[i] == datatypeName:
-                        typelist.pop(i)
-                        self.db[self.projectCollectionName].save(project)
+                    # matrices. results, occurrences have a duplicate index as types of tables
+                    # we deleted the last entry of this type, so delete the type from the datatypes list
+                    if len(datasetlist) == 0:
+                        typelist = project[u'datatypes']
+                        for i in range(0,len(typelist)):
+                            if typelist[i] == datatypeName:
+                                typelist.pop(i)
+                                self.db[self.projectCollectionName].save(project)
+                                # we deleted the type record, no need to scan farther and possibly run off the end
+                                break
+                    # we deleted the dataset record, no need to scan farther
+                    break
+        if datatypeName in ['CharacterMatrix','Occurrences','Result']:
+            self.deleteDataset(projectName, 'Table',datasetName)
+
+
 
     def getListOfDatasetsByProjectAndType(self,projectName,typeName) :
         # return a list of only the project names by using the $project operator in mongo.
@@ -338,14 +356,13 @@ class ArborFileManager:
         return newlist
 
 
-
     # ------------------- tree traversal and update using phyloimport algorithm
 
     # add a tree to the project
     def newTreeInProject(self,treename,treefile,projectTitle, treetype):
         import phyloimport_algorithm, root_phylotree_algorithm
-
-        collectionName = self.prefixString+projectTitle+self.separatorString+"PhyloTree"+self.separatorString+treename
+        collectionName = self.returnCollectionForObjectByName(projectTitle, 'PhyloTree', treename)
+        #collectionName = self.prefixString+projectTitle+self.separatorString+"PhyloTree"+self.separatorString+treename
         treeCollection = self.db[collectionName]
         print "uploading tree to collection: ",collectionName
         print "treetype is: ",treetype
@@ -428,7 +445,9 @@ class ArborFileManager:
 
     # add a character matrix to the project
     def newCharacterMatrixInProject(self,instancename,filename,projectTitle):
-        collectionName = self.prefixString+projectTitle+self.separatorString+"CharacterMatrix"+self.separatorString+instancename
+        #collectionName = self.prefixString+projectTitle+self.separatorString+"CharacterMatrix"+self.separatorString+instancename
+        collectionName = self.returnCollectionForObjectByName(projectTitle,'CharacterMatrix',instancename)
+
         newCollection = self.db[collectionName]
         print "uploading characters to collection: ",collectionName
         # create the new collection in mongo for this tree
@@ -463,6 +482,11 @@ class ArborFileManager:
         # make sure the character type exists in this project
         self.db[self.projectCollectionName].update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'CharacterMatrix'}})
 
+       # add the  matrix record entry to the 'Table' array in the project record
+        self.db[self.projectCollectionName].update({"name": projectTitle}, { '$push': {u'Table': {instancename:filename}}})
+        # make sure the Table type exists in this project
+        self.db[self.projectCollectionName].update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'Table'}})
+
     # add a character matrix to the project
     def newCharacterMatrixInProjectFromString(self, datasetname, data, projectTitle, filename):
         collectionName = self.prefixString+projectTitle+self.separatorString+"CharacterMatrix"+self.separatorString+datasetname
@@ -492,9 +516,52 @@ class ArborFileManager:
         # make sure the character type exists in this project
         self.db.ar_projects.update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'CharacterMatrix'}})
 
-    # add a character matrix to the project
+       # add the  matrix record entry to the 'Table' array in the project record
+        self.db[self.projectCollectionName].update({"name": projectTitle}, { '$push': {u'Table': {datasetname:filename}}})
+        # make sure the Table type exists in this project
+        self.db[self.projectCollectionName].update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'Table'}})
+
+
+    # add a list of occurrences to the project from a CSV stream passed as an argument
+    def newOccurrencesInProjectFromString(self,instancename,data,projectTitle):
+        #collectionName = self.prefixString+projectTitle+self.separatorString+"Occurrences"+self.separatorString+instancename
+        collectionName = self.returnCollectionForObjectByName(projectTitle,'Occurrences',instancename)
+
+        newCollection = self.db[collectionName]
+        print "uploading occurrences to collection: ",collectionName
+
+        # process the input data one line at a time
+        lines = data.splitlines(True)
+        rownum = 0
+        for row in csv.reader(lines):
+            if rownum == 0:
+                header = row
+                print "header row: ",header
+                rownum = rownum+1
+            else:
+                nextEntry = dict()
+                for colnum,columntitle in enumerate(row):
+                    #print "column: ",colnum, " title: ",columntitle
+                    # add each attribute name and value as an entry in the dict
+                    nextEntry[header[colnum]] = columntitle
+                # now insert the dictonary as a single entry in the collection
+                newCollection.insert(nextEntry)
+
+        # add a  matrix record entry to the 'CharacterMatrix' array in the project record
+        self.db[self.projectCollectionName].update({"name": projectTitle}, { '$push': {u'Occurrences': {instancename:filename}}})
+        # Add the occurrence data type in the project if the record isn't already there
+        self.db[self.projectCollectionName].update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'Occurrences'}})
+
+       # add the  matrix record entry to the 'Table' array in the project record
+        self.db[self.projectCollectionName].update({"name": projectTitle}, { '$push': {u'Table': {instancename:filename}}})
+        # make sure the Table type exists in this project
+        self.db[self.projectCollectionName].update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'Table'}})
+
+    # add occurrences list to the project (one occurrence per line assumed)
     def newOccurrencesInProject(self,instancename,filename,projectTitle):
-        collectionName = self.prefixString+projectTitle+self.separatorString+"Occurrences"+self.separatorString+instancename
+        #collectionName = self.prefixString+projectTitle+self.separatorString+"Occurrences"+self.separatorString+instancename
+        collectionName = self.returnCollectionForObjectByName(projectTitle,'Occurrences',instancename)
+
         newCollection = self.db[collectionName]
         print "uploading occurreces to collection: ",collectionName
         # create the new collection in mongo for this tree
@@ -522,6 +589,13 @@ class ArborFileManager:
         self.db[self.projectCollectionName].update({"name": projectTitle}, { '$push': {u'Occurrences': {instancename:filename}}})
         # Add the occurrence data type in the project if the record isn't already there
         self.db[self.projectCollectionName].update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'Occurrences'}})
+
+       # add the  matrix record entry to the 'Table' array in the project record
+        self.db[self.projectCollectionName].update({"name": projectTitle}, { '$push': {u'Table': {instancename:filename}}})
+        # make sure the Table type exists in this project
+        self.db[self.projectCollectionName].update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'Table'}})
+
+
 
     # add sequences to the project
     def newSequencesInProject(self,instancename,filename,projectTitle):
@@ -644,7 +718,7 @@ class ArborFileManager:
             print "attempt to add step to non-existant workflow"
 
 
-    # add a new workstep to the workflow.  We accomplish this by instantiating a workflow manager and having it
+    # add a new parameter to a workstep description.  We accomplish this by instantiating a workflow manager and having it
     # add the step, then update the datbase again.  The format of workflows is encapsulated in the WorkflowManager.
     # to keep the state saved in the database, workflow manager instances don't persist between API calls.
 
