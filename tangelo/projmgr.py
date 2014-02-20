@@ -12,7 +12,7 @@ def get(*pargs, **query_args):
         return tangelo.HTTPStatusCode(400, "Missing resource type")
 
     resource_type = pargs[0]
-    allowed = ["project", "analysis"]
+    allowed = ["project", "analysis","collection"]
     if resource_type == "project":
         if len(pargs) == 1:
             return api.getListOfProjectNames()
@@ -49,47 +49,95 @@ def get(*pargs, **query_args):
             analysis_name = pargs[1]
             coll = api.db[api.returnCollectionForAnalysisByName(analysis_name)]
             return coll.find_one()["analysis"]["script"]
-    # add a collection option to return the database and collection name for an object in the 
+
+    # add a collection option to return the database and collection name for an object in the
     # Arbor treestore.  This 'information hiding violation' of the treestore allows for low-level
     # clients to connect and work directly with the mongo database, should it be needed.  This level
-    # is used in the phylomap application. 
+    # is used in the phylomap application.
     elif resource_type == "collection":
         if len(pargs) == 4:
             project = pargs[1]
             datatype = pargs[2]
             dataset = pargs[3]
-            collname = api.returnCollectionForObjectByName(project, datatype, dataset)  
+            collname = api.returnCollectionForObjectByName(project, datatype, dataset)
             dbname = api.getMongoDatabase()
             dbhost = api.getMongoHost()
             dbport = api.getMongoPort()
-            return bson.json_util.dumps({'host':dbhost,'port':dbport,'db': dbname,'collection': collname})          
+            return bson.json_util.dumps({'host':dbhost,'port':dbport,'db': dbname,'collection': collname})
+
+    # if workflow is specified as the resource type, then list the workflows in a project or display the
+    # information about a particular workflow
+    elif resource_type == "workflow":
+        if len(pargs) == 1:
+            project = pargs[1]
+            return api.getListOfDatasetsByProjectAndType(project,"Workflow")
+        if len(pargs) == 2:
+                project = pargs[1]
+                workflowName = pargs[2]
+                return bson.json_util.dumps(api.getStatusOfWorkflow(workflowName,project))
     else:
         return tangelo.HTTPStatusCode(400, "Bad resource type '%s' - allowed types are: %s" % (resource_type, ", ".join(allowed)))
 
+# Jan 2014 - added support for workflows as a datatype inside projects.  new workflow-only named types are
+# defined here to allow workflows to be created and run through the REST interface
+#
+
 @tangelo.restful
-def put(resource, projname, datasetname=None, data=None, filename=None, filetype=None, **kwargs):
-    if resource != "project":
+def put(resource, projname, datasetname=None, data=None, filename=None, filetype=None,
+            workflowName = None, stepName=None, stepType=None, inputStepName=None, outputStepName=None,
+            inPortName=None,outPortName=None,operation=None, parameterName=None, parameterValue=None,
+            parameterValueNumber=None,flowType=None,dataType=None, **kwargs):
+    if (resource != "project") and (resource != "workflow"):
         return tangelo.HTTPStatusCode(400, "Bad resource type '%s' - allowed types are: project")
-
-    if datasetname is None:
-        api.newProject(projname)
-    else:
-        if filename is None:
-            return tangelo.HTTPStatusCode(400, "Missing argument 'filename'")
-
-        if filetype is None:
-            return tangelo.HTTPStatusCode(400, "Missing argument 'filetype'")
-
-        if data is None:
-            return tangelo.HTTPStatusCode(400, "Missing argument 'data'")
-
+    if resource == "project":
         if datasetname is None:
-            return tangelo.HTTPStatusCode(400, "Missing argument 'datasetname'")
+            api.newProject(projname)
+        else:
+            if filename is None:
+                return tangelo.HTTPStatusCode(400, "Missing argument 'filename'")
 
-        if filetype == "newick" or filetype == "phyloxml":
-            api.newTreeInProjectFromString(datasetname, data, projname, filename, filetype)
-        if filetype == "csv":
-            api.newCharacterMatrixInProjectFromString(datasetname, data, projname, filename)
+            if filetype is None:
+                return tangelo.HTTPStatusCode(400, "Missing argument 'filetype'")
+
+            if data is None:
+                return tangelo.HTTPStatusCode(400, "Missing argument 'data'")
+
+            if datasetname is None:
+                return tangelo.HTTPStatusCode(400, "Missing argument 'datasetname'")
+
+            # user wants to upload a tree or a character matrix
+            if filetype == "newick" or filetype == "phyloxml":
+                api.newTreeInProjectFromString(datasetname, data, projname, filename, filetype)
+            if (filetype == "csv" and dataType is None) or (filetype == "csv" and dataType=='CharacterMatrix'):
+                api.newCharacterMatrixInProjectFromString(datasetname, data, projname, filename)
+            if filetype == "csv" and dataType=="Occurrences":
+                api.newOccurrencesInProjectFromString(datasetname, data, projname)
+
+    # workflow creation
+    #  arborapi: /workflow/projname/workflowname - creates new empty workflow
+    #  arborapi: /workflow/projname/workflowname//
+    if resource == "workflow":
+            # the user wants to create a new, empty workflow
+            if operation == "newWorkflow":
+                api.newWorkflowInProject(workflowName, projname)
+            if operation == "newWorkstepInWorkflow":
+                    api.newWorkstepInWorkflow(workflowName, stepType, stepName, projname)
+
+            # allow user to add a parameter to a workstep or update the value of the parameter. There
+            # is currently a limitation that all values are strings, e.g. "2.4" instead of 2.4.
+
+            if operation == "updateWorkstepParameter":
+                # if a float argument is sent, use this as the value for the parameter, instead of the
+                # string.  A conversion is done to float to assure numberic values
+                if parameterValueNumber != None:
+                    print "found number filter value"
+                    parameterValue = float(parameterValueNumber)
+                api.updateWorkstepParameter(workflowName, stepName, parameterName, parameterValue, projname)
+            if operation == "connectWorksteps":
+                #api.connectStepsInWorkflow(workflowName,outStepName,outPortName,inStepName,inPortName,projname)
+                api.connectStepsInWorkflow(workflowName,outputStepName,inputStepName,projname)
+            if operation == "executeWorkflow":
+                api.executeWorkflowInProject(workflowName,projname)
 
     return "OK"
 

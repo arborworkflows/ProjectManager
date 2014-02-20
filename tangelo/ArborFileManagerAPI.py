@@ -21,7 +21,9 @@ Requirements:
 import pymongo
 from bson import ObjectId
 from pymongo import Connection
+from pymongo import MongoClient
 import json
+import bson.json_util
 import csv
 
 # used for OpenTreeOfLife access
@@ -31,22 +33,11 @@ import urllib2
 # used to parse analysis names from our list of collections
 import re
 
+# used to check environment variables
+import os
+
 import sys
 sys.path.append("tangelo")
-
-# import the recursive algorithm to process phyloXML records and create a mongo collection
-#import phyloimport_algorithm
-
-# import the algorithm to add a root to unrooted trees
-#import root_phylotree_algorithm
-
-import ArborAlgorithmManagerAPI
-
-
-import phyloimport_algorithm
-import phyloexport_algorithm
-
-import root_phylotree_algorithm
 
 # parser routine for PhyloXML
 from Bio import Phylo
@@ -162,11 +153,20 @@ class ArborFileManager:
         # multiple backing databases might be in use.  Don't leave stranded connections.
         if (getattr(self,'connection',False)):
             self.connection.close()
-        self.connection = Connection(self.defaultMongoHost, self.defaultMongoPort)
-        self.db = self.connection[self.defaultMongoDatabase]
+
+        # special case for Heroku environment
+        if 'MONGOLAB_URI' in os.environ:
+            mongo_uri = os.environ['MONGOLAB_URI']
+            other_part, sep, mongo_db = mongo_uri.rpartition('/')
+            self.connection = MongoClient(mongo_uri)
+            self.db = self.connection[mongo_db]
+        else:
+            self.connection = Connection(self.defaultMongoHost, self.defaultMongoPort)
+            self.db = self.connection[self.defaultMongoDatabase]
+
         # if there is a GUI, its project list needs to be updated because of the change in
         # the backing store for the API.
-        print "changed database"
+
         if (self.QtGuiEnabled):
             self.projectListChangedSignal.emit()
 
@@ -215,8 +215,8 @@ class ArborFileManager:
     def getCurrentProjectName(self):
         return self.currentProjectName
 
-   # look in the database and return a list of the datatypes allowed by a
-   # particular project
+    # look in the database and return a list of the datatypes allowed by a
+    # particular project
     def getListOfTypesForProject(self, projname):
         # return a list of only the project names by using the $project operator in mongo.
         # pick the 'result' field from the query
@@ -247,16 +247,24 @@ class ArborFileManager:
                     # each dataset name is the key in a dictionary.  We can
                     # assume there is only one key in the dictionary since each
                     # dataset has its own dict
-                    collectionName = self.prefixString+projectName+self.separatorString+datatype+self.separatorString+datasetlist[i].keys()[0]
+                    #collectionName = self.prefixString+projectName+self.separatorString+datatype+self.separatorString+datasetlist[i].keys()[0]
+                    collectionName = self.returnCollectionForObjectByName(projectName, datatype, datasetlist[i].keys()[0])
                     print "deleting dataset: ",collectionName
                     self.db.drop_collection(collectionName)
-        # now remove the project record from the projects collection
+        # now remove the project record from the projects collection]
         result = self.db[self.projectCollectionName].remove({ 'name' : projectName})
         return result
 
     # we might change the naming algorithm later, so lets use this method to lookup the names
+    # 2/18/13 - we did change the algorithm.  Adding a supertype of "Table" that applies to both
+    # character matrices and occurrences
+
     def returnCollectionForObjectByName(self,projectName,datatypeName, datasetName):
-        collectionName = self.prefixString+projectName+self.separatorString+datatypeName+self.separatorString+datasetName
+        if datatypeName in ['CharacterMatrix','Occurrences','Result']:
+            datatypeToUse = 'Table'
+        else:
+            datatypeToUse = datatypeName
+        collectionName = self.prefixString+projectName+self.separatorString+datatypeToUse+self.separatorString+datasetName
         return collectionName
 
     # similar to above, but for analyses
@@ -266,6 +274,8 @@ class ArborFileManager:
 
     # Convert dataset to a text string
     def getDatasetAsTextString(self,projectName,datatypeName, datasetName,stringFormat):
+        import phyloexport_algorithm
+
         outputString = None
         collectionName = self.returnCollectionForObjectByName(projectName,datatypeName, datasetName)
         datasetCollection = self.db[collectionName]
@@ -292,8 +302,8 @@ class ArborFileManager:
         print "removing dataset from project named: ",projectName
         project = self.db[self.projectCollectionName].find_one({"name" : projectName})
 
-        # first drop the dataset collections.  Do this by looking through all
-        # the datatypes this project has and deleting all instances of any type
+        # first drop the dataset collection.  Do this by looking through the project
+        # and removing the instances of this dataset
         typelist = self.getListOfTypesForProject(projectName)
         if datatypeName in typelist:
             datasetlist = project[datatypeName]
@@ -303,21 +313,31 @@ class ArborFileManager:
                     # each dataset name is the key in a dictionary.  We can
                     # assume there is only one key in the dictionary since each
                     # dataset has its own dict
-                    collectionName = self.prefixString+projectName+self.separatorString+datatypeName+self.separatorString+datasetlist[i].keys()[0]
+                    collectionName = self.returnCollectionForObjectByName(projectName,datatypeName,datasetName)
+                    #collectionName = self.prefixString+projectName+self.separatorString+datatypeName+self.separatorString+datasetlist[i].keys()[0]
                     print "deleting dataset named: ",datasetName, " in collection:",collectionName
-                    # remove the corrresponding entry from the list to delete the reference to the dataset
+                    # remove the corresponding entry from the list to delete the reference to the dataset
                     datasetlist.pop(i)
                     # now push the changed dictionary back out to update the project record
                     self.db[self.projectCollectionName].save(project)
-                    # delete the dataset itself by dropping the whole collection
+                    # delete the dataset itself by dropping the whole collection.
                     result = self.db.drop_collection(collectionName)
-            if len(datasetlist) == 0:
-                # we deleted the last entry of this type, so delete the type from the datatypes list
-                typelist = project[u'datatypes']
-                for i in range(0,len(typelist)):
-                    if typelist[i] == datatypeName:
-                        typelist.pop(i)
-                        self.db[self.projectCollectionName].save(project)
+                    # matrices. results, occurrences have a duplicate index as types of tables
+                    # we deleted the last entry of this type, so delete the type from the datatypes list
+                    if len(datasetlist) == 0:
+                        typelist = project[u'datatypes']
+                        for i in range(0,len(typelist)):
+                            if typelist[i] == datatypeName:
+                                typelist.pop(i)
+                                self.db[self.projectCollectionName].save(project)
+                                # we deleted the type record, no need to scan farther and possibly run off the end
+                                break
+                    # we deleted the dataset record, no need to scan farther
+                    break
+        if datatypeName in ['CharacterMatrix','Occurrences','Result']:
+            self.deleteDataset(projectName, 'Table',datasetName)
+
+
 
     def getListOfDatasetsByProjectAndType(self,projectName,typeName) :
         # return a list of only the project names by using the $project operator in mongo.
@@ -332,14 +352,17 @@ class ArborFileManager:
                 listOfInstances = project[typeName]
                 #print "found instances: ",listOfInstances
                 for j in range(0,len(listOfInstances)):
-                    newlist.append(listOfInstances[j].keys()[0])
+                        newlist.append(listOfInstances[j].keys()[0])
         return newlist
+
 
     # ------------------- tree traversal and update using phyloimport algorithm
 
     # add a tree to the project
     def newTreeInProject(self,treename,treefile,projectTitle, treetype):
-        collectionName = self.prefixString+projectTitle+self.separatorString+"PhyloTree"+self.separatorString+treename
+        import phyloimport_algorithm, root_phylotree_algorithm
+        collectionName = self.returnCollectionForObjectByName(projectTitle, 'PhyloTree', treename)
+        #collectionName = self.prefixString+projectTitle+self.separatorString+"PhyloTree"+self.separatorString+treename
         treeCollection = self.db[collectionName]
         print "uploading tree to collection: ",collectionName
         print "treetype is: ",treetype
@@ -356,6 +379,8 @@ class ArborFileManager:
 
     # add a tree to the project
     def newTreeInProjectFromString(self,treename,treestring,projectTitle, description,treetype):
+        import phyloimport_algorithm, root_phylotree_algorithm
+
         collectionName = self.prefixString+projectTitle+self.separatorString+"PhyloTree"+self.separatorString+treename
         treeCollection = self.db[collectionName]
         treeCollection.drop()
@@ -420,7 +445,9 @@ class ArborFileManager:
 
     # add a character matrix to the project
     def newCharacterMatrixInProject(self,instancename,filename,projectTitle):
-        collectionName = self.prefixString+projectTitle+self.separatorString+"CharacterMatrix"+self.separatorString+instancename
+        #collectionName = self.prefixString+projectTitle+self.separatorString+"CharacterMatrix"+self.separatorString+instancename
+        collectionName = self.returnCollectionForObjectByName(projectTitle,'CharacterMatrix',instancename)
+
         newCollection = self.db[collectionName]
         print "uploading characters to collection: ",collectionName
         # create the new collection in mongo for this tree
@@ -455,6 +482,11 @@ class ArborFileManager:
         # make sure the character type exists in this project
         self.db[self.projectCollectionName].update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'CharacterMatrix'}})
 
+       # add the  matrix record entry to the 'Table' array in the project record
+        self.db[self.projectCollectionName].update({"name": projectTitle}, { '$push': {u'Table': {instancename:filename}}})
+        # make sure the Table type exists in this project
+        self.db[self.projectCollectionName].update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'Table'}})
+
     # add a character matrix to the project
     def newCharacterMatrixInProjectFromString(self, datasetname, data, projectTitle, filename):
         collectionName = self.prefixString+projectTitle+self.separatorString+"CharacterMatrix"+self.separatorString+datasetname
@@ -483,9 +515,52 @@ class ArborFileManager:
         # make sure the character type exists in this project
         self.db[self.projectCollectionName].update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'CharacterMatrix'}})
 
-    # add a character matrix to the project
+       # add the  matrix record entry to the 'Table' array in the project record
+        self.db[self.projectCollectionName].update({"name": projectTitle}, { '$push': {u'Table': {datasetname:filename}}})
+        # make sure the Table type exists in this project
+        self.db[self.projectCollectionName].update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'Table'}})
+
+
+    # add a list of occurrences to the project from a CSV stream passed as an argument
+    def newOccurrencesInProjectFromString(self,instancename,data,projectTitle):
+        #collectionName = self.prefixString+projectTitle+self.separatorString+"Occurrences"+self.separatorString+instancename
+        collectionName = self.returnCollectionForObjectByName(projectTitle,'Occurrences',instancename)
+
+        newCollection = self.db[collectionName]
+        print "uploading occurrences to collection: ",collectionName
+
+        # process the input data one line at a time
+        lines = data.splitlines(True)
+        rownum = 0
+        for row in csv.reader(lines):
+            if rownum == 0:
+                header = row
+                print "header row: ",header
+                rownum = rownum+1
+            else:
+                nextEntry = dict()
+                for colnum,columntitle in enumerate(row):
+                    #print "column: ",colnum, " title: ",columntitle
+                    # add each attribute name and value as an entry in the dict
+                    nextEntry[header[colnum]] = columntitle
+                # now insert the dictonary as a single entry in the collection
+                newCollection.insert(nextEntry)
+
+        # add a  matrix record entry to the 'CharacterMatrix' array in the project record
+        self.db[self.projectCollectionName].update({"name": projectTitle}, { '$push': {u'Occurrences': {instancename:filename}}})
+        # Add the occurrence data type in the project if the record isn't already there
+        self.db[self.projectCollectionName].update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'Occurrences'}})
+
+       # add the  matrix record entry to the 'Table' array in the project record
+        self.db[self.projectCollectionName].update({"name": projectTitle}, { '$push': {u'Table': {instancename:filename}}})
+        # make sure the Table type exists in this project
+        self.db[self.projectCollectionName].update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'Table'}})
+
+    # add occurrences list to the project (one occurrence per line assumed)
     def newOccurrencesInProject(self,instancename,filename,projectTitle):
-        collectionName = self.prefixString+projectTitle+self.separatorString+"Occurrences"+self.separatorString+instancename
+        #collectionName = self.prefixString+projectTitle+self.separatorString+"Occurrences"+self.separatorString+instancename
+        collectionName = self.returnCollectionForObjectByName(projectTitle,'Occurrences',instancename)
+
         newCollection = self.db[collectionName]
         print "uploading occurreces to collection: ",collectionName
         # create the new collection in mongo for this tree
@@ -514,6 +589,13 @@ class ArborFileManager:
         # Add the occurrence data type in the project if the record isn't already there
         self.db[self.projectCollectionName].update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'Occurrences'}})
 
+       # add the  matrix record entry to the 'Table' array in the project record
+        self.db[self.projectCollectionName].update({"name": projectTitle}, { '$push': {u'Table': {instancename:filename}}})
+        # make sure the Table type exists in this project
+        self.db[self.projectCollectionName].update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'Table'}})
+
+
+
     # add sequences to the project
     def newSequencesInProject(self,instancename,filename,projectTitle):
         collectionName = self.prefixString+projectTitle+self.separatorString+"Sequences"+self.separatorString+instancename
@@ -533,40 +615,184 @@ class ArborFileManager:
         # make sure the sequence type exists in this project
         self.db[self.projectCollectionName].update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'Sequences'}})
 
+#-----------------------------------
 #------ workflows ------------------
+#-----------------------------------
 
-   # add workflow to the project
-    def newWorkflowInProject(self,instancename,projectTitle):
-        print "new workflow in project: ",projectTitle
+
+    def getWorkflowCollectionName(self,projectTitle):
+       return self.prefixString+projectTitle+self.separatorString+'workflows'
+
+    # add workflow to the project
+    def newWorkflowInProject(self,instancename,projectName):
+        print "new workflow in project: ",projectName
         # add a record entry to the 'Workflows' array in the project record
-        self.db[self.projectCollectionName].update({"name": projectTitle}, { '$push': {u'Workflows': instancename}})
+        self.db[self.projectCollectionName].update({"name": projectName}, { '$push': {u'Workflow': {instancename:instancename}}})
         # make sure the workflow type exists in this project
-        self.db[self.projectCollectionName].update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'Workflows'}})
-        # create a new workflow istance and add this workflow to the objects maintained by the API
-        # (this is in memory so far, no storage)
-        newWorkflow = ArborWorkflowManager.WorkflowManager()
-        newWorkflow.setDatabase(self.defaultMongoDatabase)
-        self.workflows[instancename] = newWorkflow
+        self.db[self.projectCollectionName].update({"name": projectName}, { '$addToSet': {u'datatypes': u'Workflow'}})
+        # add a record in the workflow document for this new workflow.  A list of the steps and the connections is
+        # maintained in the backing database collection
+        workflowCollectionName = self.getWorkflowCollectionName(projectName)
+        workflowRecord = dict()
+        workflowRecord[u'name'] = instancename
+        workflowRecord[u'analyses'] = []
+        workflowRecord[u'connections'] = []
+        self.db[workflowCollectionName].insert(workflowRecord)
 
-    # add a new workstep to the workflow
-    def newWorkstepInWorkflow(wflowName,workStepType,stepName,projectTitle,filterAttribute='attrib',filterValue=0.0):
-        if wflowName in self.workflows:
-            wflow = self.workflows[wflowName]
-            wflow.addWorkstepToWorkflow(workStepType, stepName)
+    def deleteWorkflow(self,instancename,projectName):
+        print "removing dataset from project named: ",projectName
+        project = self.db[self.projectCollectionName].find_one({"name" : projectName})
+
+        # first drop the dataset collections.  Do this by looking through all
+        # the datatypes this project has and deleting all instances of any type
+        typelist = self.getListOfTypesForProject(projectName)
+        if 'Workflow' in typelist:
+            datasetlist = project['Workflow']
+            print "found workflows: ",datasetlist
+            for i in range(0,len(datasetlist)):
+                if datasetlist[i].keys()[0] == instancename:
+                    # remove the corresponding entry from the list to delete the reference to the dataset
+                    datasetlist.pop(i)
+                    # now push the changed dictionary back out to update the project record
+                    self.db[self.projectCollectionName].save(project)
+                    # delete the record for this workflow from the project's workflow document
+                    workflowCollectionName = self.getWorkflowCollectionName(projectName)
+                    self.db[workflowCollectionName].remove({'name': instancename})
+            if len(datasetlist) == 0:
+                # we deleted the last entry of this type, so delete the type from the datatypes list
+                typelist = project[u'datatypes']
+                for i in range(0,len(typelist)):
+                    if typelist[i] == 'Workflow':
+                        typelist.pop(i)
+                        self.db[self.projectCollectionName].save(project)
+
+
+    def returnWorkflowRecord(self,workflowName,projectTitle):
+        collectionName = self.getWorkflowCollectionName(projectTitle)
+        print "collection to check:",collectionName
+        return (self.db[collectionName].find({'name':workflowName}))[0]
+
+#     # deprecated - remove soon?
+#     def returnWorkflowRecordDeprecated(self,workflowName,projectTitle):
+#         # return a list of only the project names by using the $project operator in mongo.
+#         # pick the 'result' field from the query
+#         project = self.db[self.projectCollectionName].find_one({"name" : projectTitle})
+#         print "found project record: ", project
+#         # some projects may not have dataypes yet, true during initial development at least
+#         if u'datatypes' in project:
+#             projecttypes = project[u'datatypes']
+#             print "projecttypes=",projecttypes
+#             if u'Workflow' in projecttypes:
+#                 print "workflows in this project:",project[u'Workflow']
+#                 if workflowName in project[u'Workflow']:
+#                     print "found record of this workflow:",workflowName,"in project ",projectTitle
+#                     workflowlist = self.db[self.getWorkflowCollectionName(projectTitle)].find({'name':workflowName})
+
+        # nothing was found, so return empty
+        return None
+
+    def getStatusOfWorkflow(self,workflowName,projectTitle):
+        # return a list of only the project names by using the $project operator in mongo.
+        # pick the 'result' field from the query
+        wfRecord = self.returnWorkflowRecord(workflowName,projectTitle)
+        if wfRecord != None:
+            return wfRecord
+        return "error: couldn't find workflow"
+
+    # add a new workstep to the workflow.  We accomplish this by instantiating a workflow manager and having it
+    # add the step, then update the datbase again.  The format of workflows is encapsulated in the WorkflowManager.
+    # to keep the state saved in the database, workflow manager instances don't persist between API calls.
+
+    def newWorkstepInWorkflow(self,wflowName,workStepType,stepName,projectTitle):
+        wfrecord = self.returnWorkflowRecord(wflowName,projectTitle)
+        if (wfrecord != None) :
+            workflowMgr = ArborWorkflowManager.WorkflowManager()
+            workflowMgr.setDatabaseName(self.defaultMongoDatabase)
+            workflowMgr.setProjectName(projectTitle)
+            workflowMgr.loadFrom(wfrecord)
+            workflowMgr.addWorkstepToWorkflow(workStepType, stepName)
+            wfrecord = workflowMgr.serialize()
+            self.db[self.getWorkflowCollectionName(projectTitle)].update({'name':wflowName},wfrecord)
         else:
             print "attempt to add step to non-existant workflow"
 
-    # read a workflow out of the database and execute it
-    def executeWorkflowInProject(self,instancename,projectTitle):
-        # if the workflow is already loaded, run it.  Otherwise load from the backing database
-        if instancename in self.workflows:
-            self.workflows[instancename].executeWorkflow()
-        else:
-            # create new workflow manager and load from the datastore record
-            print "creating new workflow instance and loading it to run"
+
+    # add a new parameter to a workstep description.  We accomplish this by instantiating a workflow manager and having it
+    # add the step, then update the datbase again.  The format of workflows is encapsulated in the WorkflowManager.
+    # to keep the state saved in the database, workflow manager instances don't persist between API calls.
+
+    def updateWorkstepParameter(self,wflowName,stepName,parameterName,parameterValue,projectTitle):
+        wfrecord = self.returnWorkflowRecord(wflowName,projectTitle)
+        if (wfrecord != None) :
             workflowMgr = ArborWorkflowManager.WorkflowManager()
-            workflowMgr.loadFrom(instancename, projectTitle)
-            workflowMgr.executeWorkflow()
+            workflowMgr.setDatabaseName(self.defaultMongoDatabase)
+            workflowMgr.setProjectName(projectTitle)
+            workflowMgr.loadFrom(wfrecord)
+            workflowMgr.updateParameterOfWorkstep(stepName,parameterName,parameterValue)
+            wfrecord = workflowMgr.serialize()
+            self.db[self.getWorkflowCollectionName(projectTitle)].update({'name':wflowName},wfrecord)
+        else:
+            print "attempt to add step to non-existant workflow"
+
+   # add a new workstep to the workflow.  We accomplish this by instantiating a workflow manager and having it
+    # add the step, then update the datbase again.  The format of workflows is encapsulated in the WorkflowManager.
+    # to keep the state saved in the database, workflow manager instances don't persist between API calls.
+
+    def returnWorkstepParameters(self,wflowName,stepName,projectTitle):
+        wfrecord = self.returnWorkflowRecord(wflowName,projectTitle)
+        if (wfrecord != None) :
+            workflowMgr = ArborWorkflowManager.WorkflowManager()
+            workflowMgr.setDatabaseName(self.defaultMongoDatabase)
+            workflowMgr.setProjectName(projectTitle)
+            workflowMgr.loadFrom(wfrecord)
+            parameters = workflowMgr.returnWorkstepParameters(stepName)
+            return parameters
+        else:
+            print "attempt to explore non-existant workflow"
+
+    # connect the output of one analysis to the input of another analysis.  The initial ones didn't have
+    # multiple outputs, so this interface needs to be extended.
+    def connectStepsInWorkflow(self,wflowName,outStepName,inStepName,projectTitle):
+        wfrecord = self.returnWorkflowRecord(wflowName,projectTitle)
+        if (wfrecord != None) :
+            workflowMgr = ArborWorkflowManager.WorkflowManager()
+            workflowMgr.setDatabaseName(self.defaultMongoDatabase)
+            workflowMgr.setProjectName(projectTitle)
+            workflowMgr.loadFrom(wfrecord)
+            workflowMgr.connectStepsInWorkflow(outStepName, inStepName, 'junkHereNotNeeded')
+            wfrecord = workflowMgr.serialize()
+            self.db[self.getWorkflowCollectionName(projectTitle)].update({'name':wflowName},wfrecord)
+        else:
+            print "attempt to add step to non-existant workflow"
+
+
+    # read a workflow out of the database and execute it
+    def executeWorkflowInProject(self,instancename,projectTitle,deleteIntermediateSteps=True,algorithms=None):
+        # if the workflow is defined, create new workflow manager instance, and load from the datastore record
+        project = self.db[self.projectCollectionName].find_one({"name" : projectTitle})
+        if u'datatypes' in project:
+            projecttypes = project[u'datatypes']
+            if u'Workflow' in projecttypes:
+                testProfile = {instancename : instancename }
+                if testProfile in project[u'Workflow']:
+                    print "creating new workflow instance and loading it to run"
+                    workflowMgr = ArborWorkflowManager.WorkflowManager()
+                    # mongo always returns a list of dictionaries, since this is a singleton, pass the first one to the load
+                    workflowDescription = self.db[self.getWorkflowCollectionName(projectTitle)].find({'name':instancename})[0]
+                    workflowMgr.setDatabaseName(self.defaultMongoDatabase)
+                    workflowMgr.setProjectName(projectTitle)
+                    workflowMgr.loadFrom(workflowDescription)
+                    workflowMgr.executeWorkflow(algorithms)
+                    # delete output from intermediate steps if default or user-specified behavior says to
+                    if deleteIntermediateSteps:
+                        workflowMgr.cleanupInternalSteps()
+
+    def returnListOfLoadedWorksteps(self):
+        wfm =  ArborWorkflowManager.WorkflowManager()
+        return wfm.returnListOfLoadedWorksteps()
+
+
+#----------- workflows end ------------------------
 
 
     # return a python list filled with character strings
@@ -580,6 +806,9 @@ class ArborFileManager:
         for key in record.keys():
             characterNames.append(key)
         return characterNames
+
+
+#------------------ analyses ----------------
 
    # add analysis to TreeStore.
    # This function drops the analysis' collection first if it already exists.

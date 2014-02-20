@@ -10,10 +10,8 @@ sys.path.append("tangelo")
 
 from ArborAlgorithmManagerAPI import ArborAlgorithmManager
 
-
-
 # test to see if a variable can be expressed as a continous numeric value. This
-# test is used when displaying the character names, so the user knows if they are 
+# test is used when displaying the character names, so the user knows if they are
 # continuous or discrete characters
 
 def isContinuous(s):
@@ -22,10 +20,10 @@ def isContinuous(s):
         return True
     except ValueError:
         return False
-            
-            
-# define the dialogs designed to exercise the API 
-class NewProjectDialog(QDialog):   
+
+
+# define the dialogs designed to exercise the API
+class NewProjectDialog(QDialog):
     # Define the  user interface for a new dialog to be created
     def __init__(self, ArborAPI,parent=None):
         super(NewProjectDialog, self).__init__(parent)
@@ -42,7 +40,7 @@ class NewProjectDialog(QDialog):
         self.setLayout(self.layout)
         self.cancelButton.clicked.connect(self.closeProjectDialog)
         self.acceptButton.clicked.connect(self.createNewProject)
-        
+
     def closeProjectDialog(self):
         self.hide()
 
@@ -50,19 +48,19 @@ class NewProjectDialog(QDialog):
         projectTitleAsQstring = self.projectNameDialog.text()
         # need to convert from PyQt4.QtCore.QString to Python string
         projectTitle = str(projectTitleAsQstring)
-        # if a valid name was entered, create the project record 
-        
+        # if a valid name was entered, create the project record
+
         if len(projectTitle)>0:
             print "creating project entitled:",projectTitle
             self.hide()
             # create project record in the database
             self.api.newProject(projectTitle)
-            
-    
+
+
 def initializeAllDialogs(arborAPI,algorithms):
     global savedArborAPI
     savedArborAPI = arborAPI
-    global newProjectDialogInstance 
+    global newProjectDialogInstance
     newProjectDialogInstance = NewProjectDialog(arborAPI)
     global newTreeDialogInstance
     newTreeDialogInstance = NewTreeDialog(arborAPI)
@@ -73,17 +71,19 @@ def initializeAllDialogs(arborAPI,algorithms):
     global newSequenceDialogInstance
     newSequenceDialogInstance = NewSequenceDialog(arborAPI)
     global newWorkflowDialogInstance
-    newWorkflowDialogInstance = NewWorkflowDialog(arborAPI)
+    newWorkflowDialogInstance = NewWorkflowDialog(arborAPI,algorithms)
     global newOpenTreeOfLifeDialogInstance
     newOpenTreeOfLifeDialogInstance = NewOpenTreeOfLifeDialog(arborAPI)
     global newDatabaseInfoDialogInstance
     newDatabaseInfoDialogInstance = ChangeDatabaseDialog(arborAPI)
     global newAlgorithmControlsDialogInstance
     newAlgorithmControlsDialogInstance = NewAlgorithmControlsDialog(arborAPI,algorithms)
+    global newWorkstepParameterDialogInstance
+    newWorkstepParameterDialogInstance = NewWorkstepParametersDialog(arborAPI)
     if (arborAPI.getCurrentProjectName()):
         newAlgorithmControlsDialogInstance.setCurrentProjectName(arborAPI.getCurrentProjectName())
-    
-    
+
+
 def openNewProjectDialog():
     global app
     print "open new project"
@@ -94,9 +94,9 @@ def openNewProjectDialog():
     #    print "accept was clicked"
 
 
-           
-# define the dialogs designed to exercise the API 
-class ChangeDatabaseDialog(QDialog):   
+
+# define the dialogs designed to exercise the API
+class ChangeDatabaseDialog(QDialog):
     # Define the  user interface for a new dialog to be created
     def __init__(self, ArborAPI,parent=None):
         super(ChangeDatabaseDialog, self).__init__(parent)
@@ -104,9 +104,9 @@ class ChangeDatabaseDialog(QDialog):
         self.titleText = QLabel("Enter the database to use:")
         self.databaseNameDialog = QLineEdit()
         self.titleText2 = QLabel("Enter an (optional) prefix string:")
-        self.titleText3 = QLabel("Enter a separation string (e.g. '.' or '_'):")        
+        self.titleText3 = QLabel("Enter a separation string (e.g. '.' or '_'):")
         self.prefixStringDialog = QLineEdit()
-        self.separationStringDialog = QLineEdit()        
+        self.separationStringDialog = QLineEdit()
         self.cancelButton = QPushButton("Cancel")
         self.acceptButton = QPushButton("Accept")
         self.layout = QVBoxLayout()
@@ -121,19 +121,19 @@ class ChangeDatabaseDialog(QDialog):
         self.setLayout(self.layout)
         self.cancelButton.clicked.connect(self.closeDatabaseDialog)
         self.acceptButton.clicked.connect(self.setDatabaseInfo)
-        
+
     def closeDatabaseDialog(self):
         self.hide()
 
     def setDatabaseInfo(self):
         databaseTitleAsQstring = self.databaseNameDialog.text()
-        prefixAsQstring = self.prefixStringDialog.text()   
-        separatorAsQstring = self.separationStringDialog.text()             
+        prefixAsQstring = self.prefixStringDialog.text()
+        separatorAsQstring = self.separationStringDialog.text()
         # need to convert from PyQt4.QtCore.QString to Python string
         databaseTitle = str(databaseTitleAsQstring)
         prefixString = str(prefixAsQstring)
         separatorString = str(separatorAsQstring)
-        # if a valid name was entered, create the project record 
+        # if a valid name was entered, create the project record
         if len(databaseTitle)>0:
             print "changing database to  :",databaseTitle
             print "changing prefix to  :",prefixString
@@ -144,17 +144,17 @@ class ChangeDatabaseDialog(QDialog):
             self.api.initDatabaseConnection()
             self.hide()
 
-          
+
 def openDatabaseChangeDialog():
     global app
     print "open database dialog"
     global newDatabaseInfoDialogInstance
     newDatabaseInfoDialogInstance.show()
-        
+
 
 
 # pop up to load a new tree into the selected project
-class NewTreeDialog(QDialog):   
+class NewTreeDialog(QDialog):
     # Define the  user interface for a new dialog to be created
     def __init__(self, ArborAPI,parent=None):
         super(NewTreeDialog, self).__init__(parent)
@@ -189,24 +189,24 @@ class NewTreeDialog(QDialog):
         self.selectFileNameNewick.clicked.connect(self.openFileDialogNewick)
         self.acceptButton.clicked.connect(self.createNewTree)
         self.fileSelector.fileSelected.connect(self.displayNewTreeStatus)
-        self.fileSelectorNewick.fileSelected.connect(self.displayNewTreeStatus) 
-        
+        self.fileSelectorNewick.fileSelected.connect(self.displayNewTreeStatus)
+
     def closeTreeDialog(self):
         self.hide()
-        
+
     def openFileDialog(self):
         self.fileSelector.show()
         self.treeType = "phyloxml"
-        
+
     def openFileDialogNewick(self):
-        self.fileSelectorNewick.show()        
+        self.fileSelectorNewick.show()
         self.treeType = "newick"
-        
+
     def displayNewTreeStatus(self,treefile):
         self.savedTreeFilename = str(treefile)
         confirmString = str("OK to import file '"+treefile+ "' as '"+str(self.nameDialog.text())+"' ?")
         self.confirmationText.setText(confirmString)
-        
+
     # the user selected a treefile and confirmed the selection was OK, so perform
     # the import operation
     def createNewTree(self):
@@ -216,22 +216,22 @@ class NewTreeDialog(QDialog):
         print "default project for tree is: ", self.api.getCurrentProjectName()
         # need to convert from PyQt4.QtCore.QString to Python string
         #projectTitle = str(projectTitleAsQstring)
-        # if valid names are entered, then create the tree record 
+        # if valid names are entered, then create the tree record
         if len(self.savedTreeFilename)>0 and len(self.api.getCurrentProjectName())>0:
             print "adding a tree entitled: ",self.savedTreeFilename
             self.hide()
 #            # create project record in the database
             self.api.newTreeInProject(nameForTree, self.savedTreeFilename, self.api.getCurrentProjectName(),self.treeType)
-#            
+#
 def openNewTreeDialog():
     global app
     print "open new tree dialog"
     global newTreeDialogInstance
     newTreeDialogInstance.show()
- 
+
  #------------------------ definition for character matrix -----------------
- 
-class NewCharacterDialog(QDialog):   
+
+class NewCharacterDialog(QDialog):
     # Define the  user interface for a new dialog to be created
     def __init__(self, ArborAPI,parent=None):
         super(NewCharacterDialog, self).__init__(parent)
@@ -258,7 +258,7 @@ class NewCharacterDialog(QDialog):
         self.selectFileName.clicked.connect(self.openFileDialog)
         self.acceptButton.clicked.connect(self.createNewCharacterMatrix)
         self.fileSelector.fileSelected.connect(self.displayNewCharacterStatus)
-        
+
     def closeCharacterDialog(self):
         self.hide()
     def openFileDialog(self):
@@ -267,7 +267,7 @@ class NewCharacterDialog(QDialog):
         self.savedFilename = str(inputfile)
         confirmString = str("OK to import file '"+inputfile+ "' as '"+str(self.nameDialog.text())+"' ?")
         self.confirmationText.setText(confirmString)
-        
+
     # the user selected a CSV file and confirmed the selection was OK, so perform
     # the import operation
     def createNewCharacterMatrix(self):
@@ -275,22 +275,22 @@ class NewCharacterDialog(QDialog):
         print "create new character matrix from file: ",self.savedFilename
         print "name for the tree is: ",nameForInstance
         print "default project for matrix is: ", self.api.getCurrentProjectName()
-        # if valid names are entered, then create the character record 
+        # if valid names are entered, then create the character record
         if len(self.savedFilename)>0 and len(self.api.getCurrentProjectName())>0:
             print "adding a tree entitled: ",self.savedFilename
             self.hide()
 #            # create project record in the database
             self.api.newCharacterMatrixInProject(nameForInstance, self.savedFilename, self.api.getCurrentProjectName())
-#            
+#
 def openNewCharacterDialog():
     global app
     print "open new character matrix dialog"
     global newCharacterDialogInstance
     newCharacterDialogInstance.show()
- 
+
  #------------------------ definition for occurrences -----------------
- 
-class NewOccurrenceDialog(QDialog):   
+
+class NewOccurrenceDialog(QDialog):
     # Define the  user interface for a new dialog to be created
     def __init__(self, ArborAPI,parent=None):
         super(NewOccurrenceDialog, self).__init__(parent)
@@ -317,18 +317,18 @@ class NewOccurrenceDialog(QDialog):
         self.selectFileName.clicked.connect(self.openFileDialog)
         self.acceptButton.clicked.connect(self.createNewOccurrences)
         self.fileSelector.fileSelected.connect(self.displayNewOccurrencesStatus)
-        
+
     def closeOccurrencesDialog(self):
         self.hide()
-        
+
     def openFileDialog(self):
         self.fileSelector.show()
-        
+
     def displayNewOccurrencesStatus(self,inputfile):
         self.savedFilename = str(inputfile)
         confirmString = str("OK to import file '"+inputfile+ "' as '"+str(self.nameDialog.text())+"' ?")
         self.confirmationText.setText(confirmString)
-        
+
     # the user selected a CSV file and confirmed the selection was OK, so perform
     # the import operation
     def createNewOccurrences(self):
@@ -336,25 +336,25 @@ class NewOccurrenceDialog(QDialog):
         print "create new occurrence records from file: ",self.savedFilename
         print "name for the occurrence set is: ",nameForInstance
         print "default project for occurrence is: ", self.api.getCurrentProjectName()
-        # if valid names are entered, then create the character record 
+        # if valid names are entered, then create the character record
         if len(self.savedFilename)>0 and len(self.api.getCurrentProjectName())>0:
             print "adding occurrences entitled: ",self.savedFilename
             self.hide()
 #            # create project record in the database
             self.api.newOccurrencesInProject(nameForInstance, self.savedFilename, self.api.getCurrentProjectName())
-#            
+#
 def openNewOccurrencesDialog():
     global app
     print "open new occurrence dialog"
     global newOccurrenceDialogInstance
     newOccurrenceDialogInstance.show()
- 
- 
- 
- 
+
+
+
+
  #------------------------ definition for sequences  -----------------
- 
-class NewSequenceDialog(QDialog):   
+
+class NewSequenceDialog(QDialog):
     # Define the  user interface for a new dialog to be created
     def __init__(self, ArborAPI,parent=None):
         super(NewSequenceDialog, self).__init__(parent)
@@ -381,18 +381,18 @@ class NewSequenceDialog(QDialog):
         self.selectFileName.clicked.connect(self.openFileDialog)
         self.acceptButton.clicked.connect(self.createNewSequence)
         self.fileSelector.fileSelected.connect(self.displayNewSequenceStatus)
-        
+
     def closeSequenceDialog(self):
         self.hide()
-        
+
     def openFileDialog(self):
         self.fileSelector.show()
-        
+
     def displayNewSequenceStatus(self,inputfile):
         self.savedFilename = str(inputfile)
         confirmString = str("OK to import file '"+inputfile+ "' as '"+str(self.nameDialog.text())+"' ?")
         self.confirmationText.setText(confirmString)
-        
+
     # the user selected a CSV file and confirmed the selection was OK, so perform
     # the import operation
     def createNewSequence(self):
@@ -400,87 +400,26 @@ class NewSequenceDialog(QDialog):
         print "create new sequence records from file: ",self.savedFilename
         print "name for the sequence set is: ",nameForInstance
         print "default project for sequence is: ", self.api.getCurrentProjectName()
-        # if valid names are entered, then create the character record 
+        # if valid names are entered, then create the character record
         if len(self.savedFilename)>0 and len(self.api.getCurrentProjectName())>0:
             print "adding sequence entitled: ",self.savedFilename
             self.hide()
 #            # create project record in the database
             self.api.newSequencesInProject(nameForInstance, self.savedFilename, self.api.getCurrentProjectName())
-#            
+#
 def openNewSequenceDialog():
     global app
     print "open new sequence dialog"
     global newSequenceDialogInstance
     newSequenceDialogInstance.show()
- 
- 
- 
- #------------------------ definition for workflows  -----------------
- 
-class NewWorkflowDialog(QDialog):   
-    # Define the  user interface for a new dialog to be created
-    def __init__(self, ArborAPI,parent=None):
-        super(NewWorkflowDialog, self).__init__(parent)
-        self.api = ArborAPI
-        self.titleText = QLabel("Add a new workflow to the current project")
-        self.titleText2 = QLabel("Enter the name to give the workflow:")
-        self.confirmationText = QLabel("")
-        self.nameDialog = QLineEdit()
-        self.selectFileName = QPushButton("Select workflow file to import")
-        self.fileSelector = QFileDialog()
-        self.fileSelector.setNameFilter("wflow files (*.wflow)")
-        self.cancelButton = QPushButton("Cancel")
-        self.acceptButton = QPushButton("Accept")
-        self.layout = QVBoxLayout()
-        self.layout.addWidget(self.titleText)
-        self.layout.addWidget(self.titleText2)
-        self.layout.addWidget(self.nameDialog)
-        self.layout.addWidget(self.selectFileName)
-        self.layout.addWidget(self.confirmationText)
-        self.layout.addWidget(self.acceptButton)
-        self.layout.addWidget(self.cancelButton)
-        self.setLayout(self.layout)
-        self.cancelButton.clicked.connect(self.closeWorkflowDialog)
-        self.selectFileName.clicked.connect(self.openFileDialog)
-        self.acceptButton.clicked.connect(self.createNewWorkflow)
-        self.fileSelector.fileSelected.connect(self.displayNewWorkflowStatus)
-        
-    def closeWorkflowDialog(self):
-        self.hide()
-        
-    def openFileDialog(self):
-        self.fileSelector.show()
-        
-    def displayNewWorkflowStatus(self,inputfile):
-        self.savedFilename = str(inputfile)
-        confirmString = str("OK to import file '"+inputfile+ "' as '"+str(self.nameDialog.text())+"' ?")
-        self.confirmationText.setText(confirmString)
-        
-    # the user selected a CSV file and confirmed the selection was OK, so perform
-    # the import operation
-    def createNewWorkflow(self):
-        nameForInstance = str(self.nameDialog.text())
-        print "create new sequence records from file: ",self.savedFilename
-        print "name for the sequence set is: ",nameForInstance
-        print "default project for sequence is: ", self.api.getCurrentProjectName()
-        # if valid names are entered, then create the character record 
-        if len(self.savedFilename)>0 and len(self.api.getCurrentProjectName())>0:
-            print "adding sequence entitled: ",self.savedFilename
-            self.hide()
-#            # create project record in the database
-            self.api.newWorkflowInProject(nameForInstance, self.savedFilename, self.api.getCurrentProjectName())
-#            
-def openNewWorkflowDialog():
-    global app
-    print "open new workflow dialog"
-    global newWorkflowDialogInstance
-    newWorkflowDialogInstance.show()
- 
+
+
+
  #----------------
- 
- 
+
+
 # pop up to load a tree from the Open Tree of Life Project
-class NewOpenTreeOfLifeDialog(QDialog):   
+class NewOpenTreeOfLifeDialog(QDialog):
     # Define the  user interface for a new dialog to be created
     def __init__(self, ArborAPI,parent=None):
         super(NewOpenTreeOfLifeDialog, self).__init__(parent)
@@ -504,10 +443,10 @@ class NewOpenTreeOfLifeDialog(QDialog):
         self.setLayout(self.layout)
         self.cancelButton.clicked.connect(self.closeTreeDialog)
         self.acceptButton.clicked.connect(self.createNewTreeFromOpenTreeOfLife)
-        
+
     def closeTreeDialog(self):
         self.hide()
-        
+
     # the user has entered an OTToLID from the OTL, so lets retrieve it
     def createNewTreeFromOpenTreeOfLife(self):
         nameForTree = str(self.nameDialog.text())
@@ -516,24 +455,24 @@ class NewOpenTreeOfLifeDialog(QDialog):
         print "default project for tree is: ", self.api.getCurrentProjectName()
         # need to convert from PyQt4.QtCore.QString to Python string
         #projectTitle = str(projectTitleAsQstring)
-        # if valid names are entered, then create the tree record 
+        # if valid names are entered, then create the tree record
         if len(self.api.getCurrentProjectName())>0:
             self.hide()
 #           # create project record in the database
             self.api.newTreeFromOpenTreeOfLife(nameForTree, self.ottolidDialog.text(), self.api.getCurrentProjectName())
-#            
+#
 def openNewTreeOfLifeDialog():
     global app
     print "open new tree dialog"
     global newOpenTreeOfLifeDialogInstance
     newOpenTreeOfLifeDialogInstance.show()
-    
-    
-     #----------------
- 
- 
+
+
+#----------------
+
+
 # pop up to load a tree from the Open Tree of Life Project
-class NewAlgorithmControlsDialog(QDialog):   
+class NewAlgorithmControlsDialog(QDialog):
     # Define the  user interface for a new dialog to be created
     def __init__(self, ArborAPI,ArborAlgorithmsAPI,parent=None):
         super(NewAlgorithmControlsDialog, self).__init__(parent)
@@ -541,26 +480,26 @@ class NewAlgorithmControlsDialog(QDialog):
         self.algorithms = ArborAlgorithmsAPI
         self.currentProjectName = ''
         self.titleText = QLabel("Run Analyses")
-        
+
         self.vert_splitter = QSplitter(Qt.Vertical, self)
         self.button_splitter = QSplitter(Qt.Vertical,self)
         self.vert_splitter2 = QSplitter(Qt.Vertical,self)
-        
+
         # list the tree instances of data in the project
-        self.treeLabel = QLabel("Select a Tree:")      
+        self.treeLabel = QLabel("Select a Tree:")
         self.treeLabel.setMaximumHeight(40)
         self.treeListWidget = QListWidget(self)
         self.treeListWidget.setObjectName("treeListWidget")
-        
+
         # list the character matrix instances of data in the project
         self.matrixLabel = QLabel("Select a Character Matrix:")
         self.matrixLabel.setMaximumHeight(40)
         self.matrixListWidget = QListWidget(self)
         self.matrixListWidget.setObjectName("matrixListWidget")
-        
+
         # list the attribute columns in the current character matrix
         self.charcterLabel = QLabel("Select a Character:")
-        self.charcterLabel.setMaximumHeight(40)        
+        self.charcterLabel.setMaximumHeight(40)
         self.characterListWidget = QListWidget(self)
         self.characterListWidget.setObjectName("characterListWidget")
 
@@ -569,7 +508,7 @@ class NewAlgorithmControlsDialog(QDialog):
         self.algorithmLabel.setMaximumHeight(40)
         self.algorithmListWidget = QListWidget(self)
         self.algorithmListWidget.setObjectName("algorithmListWidget")
-    
+
         self.confirmationText = QLabel("")
         self.nameDialog = QLineEdit()
         self.titleText3 = QLabel("Enter the output name to use:")
@@ -578,14 +517,14 @@ class NewAlgorithmControlsDialog(QDialog):
         self.outputObjectName.setMaximumHeight(50)
         self.cancelButton = QPushButton("Close Window")
         self.runButton = QPushButton("Run Tree/Matrix \n  Algorithm")
-        
+
         #put up a logo
         pm = QPixmap("Arbor_128px.png")
         self.arborLogo = QLabel()
         self.arborLogo.setPixmap(pm);
         self.arborLogo.setAlignment(Qt.AlignCenter)
-        
-        # lay out the elements in the dialog panel 
+
+        # lay out the elements in the dialog panel
         self.vert_splitter.addWidget(self.treeLabel)
         self.vert_splitter.addWidget(self.treeListWidget)
         self.vert_splitter.addWidget(self.matrixLabel)
@@ -593,40 +532,40 @@ class NewAlgorithmControlsDialog(QDialog):
         self.vert_splitter2.addWidget(self.charcterLabel)
         self.vert_splitter2.addWidget(self.characterListWidget)
         self.vert_splitter2.addWidget(self.algorithmLabel)
-        self.vert_splitter2.addWidget(self.algorithmListWidget)       
+        self.vert_splitter2.addWidget(self.algorithmListWidget)
         self.button_splitter.addWidget(self.arborLogo)
         self.button_splitter.addWidget(self.titleText3)
         self.button_splitter.addWidget(self.outputObjectName)
         self.button_splitter.addWidget(self.runButton)
-        self.button_splitter.addWidget(self.cancelButton)   
-         
+        self.button_splitter.addWidget(self.cancelButton)
+
         self.layout = QHBoxLayout()
         #self.layout.addWidget(self.arborLogo)
         self.layout.addWidget(self.vert_splitter)
         self.layout.addWidget(self.vert_splitter2)
         self.layout.addWidget(self.button_splitter)
         self.setLayout(self.layout)
-        
+
         # connect statements to connect behaviors to events
         self.cancelButton.clicked.connect(self.closeAlgrorithmControlsDialog)
         self.runButton.clicked.connect(self.doStuff)
         self.matrixListWidget.currentItemChanged.connect(self.fillCharacterListWidget)
-        
+
     def closeAlgrorithmControlsDialog(self):
         self.hide()
-        
+
     def clearAll(self):
         self.treeListWidget.clear()
         self.matrixListWidget.clear()
-        self.characterListWidget.clear()        
-        
+        self.characterListWidget.clear()
+
     def loadAlgorithms(self):
          # get a record from the Arbor datastore and iterate through its headers
         self.algorithmListWidget.clear()
         charList = self.algorithms.returnListOfLoadedAlgorithms()
         for j in range(0,len(charList)):
             self.algorithmListWidget.addItem(charList[j])
-        
+
     def setCurrentProjectName(self,prname):
         self.characterListWidget.clear()
         # fill tree and character matrix lists
@@ -643,7 +582,7 @@ class NewAlgorithmControlsDialog(QDialog):
             self.matrixListWidget.addItem(matrixInstances[j])
 
     # this method finds whih matrix has been selected and list all the columns
-    # to be processed in the cha    
+    # to be processed in the cha
     def fillCharacterListWidget(self):
         if (self.matrixListWidget.currentItem()):
          matrixname = str(self.matrixListWidget.currentItem().text())
@@ -673,15 +612,15 @@ class NewAlgorithmControlsDialog(QDialog):
                 currenttree=self.treeListWidget.currentItem().text()
             if (self.matrixListWidget.currentItem()):
                 currentmatrix = self.matrixListWidget.currentItem().text()
-            if (self.characterListWidget.currentItem()):                
+            if (self.characterListWidget.currentItem()):
                 currentcharacter = self.characterListWidget.currentItem().text()
             if (self.outputObjectName.text()):
                 outputname = self.outputObjectName.text()
             # TODO: add checking logic here to make sure appropriate data types are defined for algorithms
-            # before running them.  All algorithms could have a list of data they depend on and it would get checked 
+            # before running them.  All algorithms could have a list of data they depend on and it would get checked
             self.algorithms.runAlgorithmByName(algorithmToRun,self.api.getMongoDatabase(),self.currentProjectName,currenttree,currentmatrix,currentcharacter,outputname)
         pass
-#            
+#
 def openAlgorithmControlsDialog():
     global app
     print "open algorithm controls "
@@ -689,8 +628,385 @@ def openAlgorithmControlsDialog():
     #newAlgorithmControlsDialogInstance.clearAll()
     newAlgorithmControlsDialogInstance.loadAlgorithms()
     newAlgorithmControlsDialogInstance.show()
-    
-# this is defined at the dialogs package level, it invokes changed toany 
-# dialogs that needs to know the project has changed    
+
+# this is defined at the dialogs package level, it invokes changed toany
+# dialogs that needs to know the project has changed
 def changeCurrentProject(prname):
     newAlgorithmControlsDialogInstance.setCurrentProjectName(prname)
+
+
+
+
+
+ #------------------------ definition for workflows  -----------------
+
+# pop up to load a tree from the Open Tree of Life Project
+class NewWorkflowDialog(QDialog):
+    # Define the  user interface for a new dialog to be created
+    def __init__(self, ArborAPI,AlgorithmAPI,parent=None):
+        super(NewWorkflowDialog, self).__init__(parent)
+        self.api = ArborAPI
+        self.algorithms = AlgorithmAPI
+        self.currentProjectName = ''
+        self.titleText = QLabel("Add a new workflow to the current project")
+
+        # left column (existing wflows and naming the new one
+
+        self.vert_splitter = QSplitter(Qt.Vertical, self)
+        self.vert_splitter2 = QSplitter(Qt.Vertical,self)
+        self.vert_splitter3 = QSplitter(Qt.Vertical,self)
+        self.vert_splitter4 = QSplitter(Qt.Vertical,self)
+        self.button_splitter = QSplitter(Qt.Vertical,self)
+
+        self.titleText2 = QLabel("Existing workflows:")
+        self.workflowListWidget = QListWidget(self)
+        self.nameWflowText = QLabel("New Workflow Name:")
+        self.newWfNameDialog = QLineEdit()
+        self.newWorkflowButton = QPushButton("Create New Workflow")
+        self.deleteWorkflowButton = QPushButton("Delete Workflow")
+        self.executeWorkflowButton = QPushButton("Execute Workflow")
+
+        # 2nd column; list workstep types and name of new step dialog
+        self.stepTypeLabel = QLabel("Workstep Types: ")
+        self.stepTypeLabel.setMaximumHeight(40)
+        self.workstepListWidget = QListWidget(self)
+        self.workstepListWidget.setObjectName("workstepListWidget")
+
+        self.nameWflowText2 = QLabel("New Workstep Name:")
+        self.newStepNameDialog = QLineEdit()
+        self.newWorkstepButton = QPushButton("New Step in the Workflow")
+
+        # list the attribute columns in the current character matrix
+        self.outText1 = QLabel("connect output of:")
+        self.outText1.setMaximumHeight(40)
+        self.outputOfListWidget = QListWidget(self)
+        self.outputOfListWidget.setMaximumHeight(200)
+        self.outText2 = QLabel("select output:")
+        self.outputSelectDialog = QLineEdit()
+
+        self.setStepParametersButton = QPushButton("Edit Workstep Parameters")
+
+        self.inText1 = QLabel("to input of:")
+        self.inText1.setMaximumHeight(40)
+        self.inputOfListWidget = QListWidget(self)
+        self.inputOfListWidget.setMaximumHeight(200)
+        self.inText2 = QLabel("select output:")
+        self.inputSelectDialog = QLineEdit()
+        self.connectButton = QPushButton("Connect Steps")
+
+        self.cancelButton = QPushButton("Close Window")
+
+        #put up a logo
+        pm = QPixmap("Arbor_128px.png")
+        self.arborLogo = QLabel()
+        self.arborLogo.setPixmap(pm);
+        self.arborLogo.setAlignment(Qt.AlignCenter)
+
+        # lay out the elements in the dialog panel
+        self.vert_splitter.addWidget(self.titleText)
+        self.vert_splitter.addWidget(self.workflowListWidget)
+        self.vert_splitter.addWidget(self.nameWflowText)
+        self.vert_splitter.addWidget(self.newWfNameDialog)
+        self.vert_splitter.addWidget(self.newWorkflowButton)
+        self.vert_splitter.addWidget(self.deleteWorkflowButton)
+        self.vert_splitter.addWidget(self.executeWorkflowButton)
+
+        self.vert_splitter2.addWidget(self.stepTypeLabel)
+        self.vert_splitter2.addWidget(self.workstepListWidget)
+        self.vert_splitter2.addWidget(self.nameWflowText2)
+        self.vert_splitter2.addWidget(self.newStepNameDialog)
+        self.vert_splitter2.addWidget(self.newWorkstepButton)
+
+        self.vert_splitter3.addWidget(self.outText1)
+        self.vert_splitter3.addWidget(self.outputOfListWidget)
+        self.vert_splitter3.addWidget(self.setStepParametersButton)
+        #self.vert_splitter3.addWidget(self.outText2)
+        #self.vert_splitter3.addWidget(self.outputSelectDialog)
+
+        self.vert_splitter4.addWidget(self.inText1)
+        self.vert_splitter4.addWidget(self.inputOfListWidget)
+        #self.vert_splitter4.addWidget(self.inText2)
+        #self.vert_splitter4.addWidget(self.inputSelectDialog)
+        self.vert_splitter4.addWidget(self.connectButton)
+
+        self.button_splitter.addWidget(self.arborLogo)
+        self.button_splitter.addWidget(self.cancelButton)
+
+        self.layout = QHBoxLayout()
+        #self.layout.addWidget(self.arborLogo)
+        self.layout.addWidget(self.vert_splitter)
+        self.layout.addWidget(self.vert_splitter2)
+        self.layout.addWidget(self.vert_splitter3)
+        self.layout.addWidget(self.vert_splitter4)
+        self.layout.addWidget(self.button_splitter)
+        self.setLayout(self.layout)
+
+        # connect statements to connect behaviors to events
+        self.cancelButton.clicked.connect(self.closeWorkflowDialog)
+        self.connectButton.clicked.connect(self.connectStuff)
+        self.newWorkflowButton.clicked.connect(self.createNewWorkflow)
+        self.deleteWorkflowButton.clicked.connect(self.deleteWorkflow)
+        self.executeWorkflowButton.clicked.connect(self.executeWorkflow)
+        self.newWorkstepButton.clicked.connect(self.newWorkstepInWorkflow)
+        self.workflowListWidget.itemClicked.connect(self.selectWorkflowItem)
+
+
+    def closeWorkflowDialog(self):
+        self.hide()
+
+    def openWorkstepParameterButton(self):
+        self.openNewWorkstepParametersDialog()
+
+    def connectStuff(self):
+        print "** connect stuff **"
+        projectTitle = self.api.getCurrentProjectName()
+        wflowName = str(self.workflowListWidget.currentItem().text())
+        outstep = str(self.outputOfListWidget.currentItem().text())
+        instep = str(self.inputOfListWidget.currentItem().text())
+        self.api.connectStepsInWorkflow(wflowName,outstep,instep,projectTitle)
+
+    # the user clicked on a workflow, update the other UI elements to show info from the database
+    # about this iteam
+    def selectWorkflowItem(self):
+        projectTitle = self.api.getCurrentProjectName()
+        wflowName = str(self.workflowListWidget.currentItem().text())
+        print "looking up record for wf:",wflowName,"proj:",projectTitle
+        wflowRecord = self.api.returnWorkflowRecord(wflowName,projectTitle)
+        print wflowRecord
+        # fill the "output of" and "input of" list widgets since the user will want to
+        # connect the steps together
+        self.inputOfListWidget.clear()
+        self.outputOfListWidget.clear()
+        for step in wflowRecord['analyses']:
+            if step['name']:
+                self.inputOfListWidget.addItem(step['name'])
+                self.outputOfListWidget.addItem(step['name'])
+
+    # add the record of a new workstep to the currently selected workflow
+    def newWorkstepInWorkflow(self):
+        projectTitle = self.api.getCurrentProjectName()
+        workStepType = str(self.workstepListWidget.currentItem().text())
+        stepName = str(self.newStepNameDialog.text())
+        wflowName = str(self.workflowListWidget.currentItem().text())
+        self.api.newWorkstepInWorkflow(str(wflowName),str(workStepType),str(stepName),projectTitle)
+        # rerender the input/output lists so the new step shows up
+        self.selectWorkflowItem()
+
+    # add the record of a new workstep to the currently selected workflow
+    def deleteWorkflow(self):
+        projectTitle = self.api.getCurrentProjectName()
+        wflowName = str(self.workflowListWidget.currentItem().text())
+        self.api.deleteWorkflow(str(wflowName),projectTitle)
+        self.fillDialogs()
+
+    # add the record of a new workstep to the currently selected workflow
+    def executeWorkflow(self):
+        print "executing workflow"
+        projectTitle = self.api.getCurrentProjectName()
+        wflowName = str(self.workflowListWidget.currentItem().text())
+        # execute workflow, delete intermediate steps, pass algorithms in for execution
+        self.api.executeWorkflowInProject(str(wflowName),projectTitle,True,self.algorithms)
+        self.fillDialogs()
+
+
+    # the user selected a  file and confirmed the selection was OK, so perform
+    # the import operation
+    def createNewWorkflow(self):
+        nameForInstance = str(self.newWfNameDialog.text())
+        currentProject = self.api.getCurrentProjectName()
+        # if valid names are entered, then create the character record
+        if len(nameForInstance)>0 and len(currentProject)>0:
+            print "name for a new workflow is: ",nameForInstance
+            print "default project for workflow is: ", currentProject
+#           # create project record in the database
+            self.api.newWorkflowInProject(nameForInstance, currentProject)
+            self.fillDialogs()
+
+    def fillDialogs(self):
+        # get a record from the Arbor project and iterate through its workflows
+        self.workflowListWidget.clear()
+        project = self.api.getCurrentProjectName()
+        itemList = self.api.getListOfDatasetsByProjectAndType(project,"Workflow")
+        for j in range(0,len(itemList)):
+            self.workflowListWidget.addItem(itemList[j])
+        # fill the worksteps dialog
+        self.workstepListWidget.clear()
+        itemList = self.api.returnListOfLoadedWorksteps()
+        for j in range(0,len(itemList)):
+            self.workstepListWidget.addItem(itemList[j])
+
+def openNewWorkflowDialog():
+    global app
+    print "open new workflow dialog"
+    global newWorkflowDialogInstance
+    newWorkflowDialogInstance.fillDialogs()
+    newWorkflowDialogInstance.show()
+
+#-----------------------------------------
+# workstep parameter options dialog
+#-----------------------------------------
+
+# pop up to interact with workflows inside a single project
+class NewWorkstepParametersDialog(QDialog):
+    # Define the  user interface for a new dialog to be created
+    def __init__(self, ArborAPI,parent=None):
+        super(NewWorkstepParametersDialog, self).__init__(parent)
+        self.api = ArborAPI
+        self.currentProjectName = ''
+        self.titleText = QLabel("Add a new workflow to the current project")
+
+        self.vert_splitter = QSplitter(Qt.Vertical, self)
+        self.vert_splitter2 = QSplitter(Qt.Vertical,self)
+        self.vert_splitter3 = QSplitter(Qt.Vertical,self)
+        #self.vert_splitter4 = QSplitter(Qt.Vertical,self)
+        self.button_splitter = QSplitter(Qt.Vertical,self)
+
+       # left column (existing wflows and the worksteps in the flow
+
+        self.titleText2 = QLabel("Existing workflows:")
+        self.workflowListWidget = QListWidget(self)
+        self.stepTypeLabel = QLabel("Worksteps: ")
+        self.stepTypeLabel.setMaximumHeight(40)
+        self.workstepListWidget = QListWidget(self)
+        self.workstepListWidget.setObjectName("workstepListWidget")
+
+        # 2nd column; list parameter name and value
+        self.parameterNameText = QLabel("Parameter Name:")
+        self.parameterNameDialog = QLineEdit()
+        self.numericValueText = QLabel("Numeric Value:")
+        self.numericValueDialog = QLineEdit()
+        self.addNumericParameterButton = QPushButton("Add Numeric Parameter")
+        self.stringValueText = QLabel("String Parameter:")
+        self.stringValueText.setMaximumHeight(40)
+        self.stringValueDialog = QLineEdit()
+        self.addStringParameterButton = QPushButton("Add String Parameter")
+
+        # show the already defined parameters
+        self.outText1 = QLabel("Defined Parameters:")
+        self.outText1.setMaximumHeight(40)
+        self.definedParametersListWidget = QListWidget(self)
+        self.definedParametersListWidget.setMaximumHeight(200)
+
+        #put up a logo
+        pm = QPixmap("Arbor_128px.png")
+        self.arborLogo = QLabel()
+        self.arborLogo.setPixmap(pm);
+        self.arborLogo.setAlignment(Qt.AlignCenter)
+
+        self.cancelButton = QPushButton("Close Window")
+
+        # lay out the elements in the dialog panel
+        self.vert_splitter.addWidget(self.titleText2)
+        self.vert_splitter.addWidget(self.workflowListWidget)
+        self.vert_splitter.addWidget(self.stepTypeLabel)
+        self.vert_splitter.addWidget(self.workstepListWidget)
+
+        self.vert_splitter2.addWidget(self.parameterNameText)
+        self.vert_splitter2.addWidget(self.parameterNameDialog)
+        self.vert_splitter2.addWidget(self.numericValueText)
+        self.vert_splitter2.addWidget(self.numericValueDialog)
+        self.vert_splitter2.addWidget(self.addNumericParameterButton)
+        self.vert_splitter2.addWidget(self.stringValueText)
+        self.vert_splitter2.addWidget(self.stringValueDialog)
+        self.vert_splitter2.addWidget(self.addStringParameterButton)
+
+        self.vert_splitter3.addWidget(self.outText1)
+        self.vert_splitter3.addWidget(self.definedParametersListWidget)
+
+        self.button_splitter.addWidget(self.arborLogo)
+        self.button_splitter.addWidget(self.cancelButton)
+
+        self.layout = QHBoxLayout()
+        #self.layout.addWidget(self.arborLogo)
+        self.layout.addWidget(self.vert_splitter)
+        self.layout.addWidget(self.vert_splitter2)
+        self.layout.addWidget(self.vert_splitter3)
+        self.layout.addWidget(self.button_splitter)
+        self.setLayout(self.layout)
+
+        # connect statements to connect behaviors to events
+        self.cancelButton.clicked.connect(self.closeWorkstepParameterDialog)
+        self.addStringParameterButton.clicked.connect(self.addStringParameter)
+        self.addNumericParameterButton.clicked.connect(self.addNumericParameter)
+        self.workflowListWidget.itemClicked.connect(self.selectWorkflowItem)
+        self.workstepListWidget.itemClicked.connect(self.selectWorkstepItem)
+
+
+    def closeWorkstepParameterDialog(self):
+        self.hide()
+
+    # this method adds/updates a string parameter on a workstep inside the selected
+    # workflow.  The current selections for workflow and worksteps are read in order to
+    # decide which step to change.  The strings entered are processed with str() to convert
+    # them from QStrings to python strings before further proessing, as he API is pure python.
+
+    def addStringParameter(self):
+        print "add string parameter"
+        projectTitle = self.api.getCurrentProjectName()
+        wflowName = str(self.workflowListWidget.currentItem().text())
+        thisStepName = str(self.workstepListWidget.currentItem().text())
+        parameterName = str(self.parameterNameDialog.text())
+        parameterValue = str(self.stringValueDialog.text())
+        self.api.updateWorkstepParameter(wflowName,thisStepName,parameterName,parameterValue,projectTitle)
+        self.fillWorkstepParametersDialog()
+
+    def addNumericParameter(self):
+        print "add numeric parameter"
+        projectTitle = self.api.getCurrentProjectName()
+        wflowName = str(self.workflowListWidget.currentItem().text())
+        thisStepName = str(self.workstepListWidget.currentItem().text())
+        parameterName = str(self.parameterNameDialog.text())
+        parameterValue = float(self.numericValueDialog.text())
+        self.api.updateWorkstepParameter(wflowName,thisStepName,parameterName,parameterValue,projectTitle)
+        self.fillWorkstepParametersDialog()
+
+    # the user clicked on a workflow, update the other UI elements to show info from the database
+    # about this iteam
+    def selectWorkflowItem(self):
+        projectTitle = self.api.getCurrentProjectName()
+        wflowName = str(self.workflowListWidget.currentItem().text())
+        print "looking up record for wf:",wflowName,"proj:",projectTitle
+        wflowRecord = self.api.returnWorkflowRecord(wflowName,projectTitle)
+        print wflowRecord
+        # fill the list of steps in this workflow
+        self.workstepListWidget.clear()
+        for step in wflowRecord['analyses']:
+            if step['name']:
+                self.workstepListWidget.addItem(step['name'])
+
+    # the user clicked on a workstep, update the other UI elements to show info from the database
+    # about this item
+    def selectWorkstepItem(self):
+        self.numericValueDialog.clear()
+        self.stringValueDialog.clear()
+        self.parameterNameDialog.clear()
+        self.fillWorkstepParametersDialog()
+
+
+    def fillDialogs(self):
+        # get a record from the Arbor project and iterate through its workflows
+        self.workflowListWidget.clear()
+        project = self.api.getCurrentProjectName()
+        itemList = self.api.getListOfDatasetsByProjectAndType(project,"Workflow")
+        for j in range(0,len(itemList)):
+            self.workflowListWidget.addItem(itemList[j])
+
+    def fillWorkstepParametersDialog(self):
+        projectTitle = self.api.getCurrentProjectName()
+        wflowName = str(self.workflowListWidget.currentItem().text())
+        thisStepName = str(self.workstepListWidget.currentItem().text())
+        print "retrieving parameters for:",thisStepName
+        parameters = self.api.returnWorkstepParameters(wflowName,thisStepName,projectTitle)
+        self.definedParametersListWidget.clear()
+        for param in parameters:
+            # build a string with the parameter name and value
+            paramString = param + ": " + str(parameters[param])
+            self.definedParametersListWidget.addItem(paramString)
+
+
+def openWorkstepParametersDialog():
+    global app
+    print "open new workstep parameters dialog"
+    global newWorkstepParametersDialogInstance
+    newWorkstepParameterDialogInstance.fillDialogs()
+    newWorkstepParameterDialogInstance.show()
