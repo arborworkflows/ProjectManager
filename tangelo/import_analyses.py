@@ -33,9 +33,18 @@ for xml_file in xml_files:
   # find each matching pair of .xml & .R files
   analysis_name = xml_file[:-4]
 
-  script_path = xml_dir + "/" + analysis_name + ".R"
-  if not os.path.exists(script_path):
-    print "Skipping %s because %s does not exist" % (analysis_name, script_path)
+  script_path = ""
+  analysis_type = ""
+  r_script_path = xml_dir + "/" + analysis_name + ".R"
+  python_script_path = xml_dir + "/" + analysis_name + ".py"
+  if os.path.exists(r_script_path):
+    script_path = r_script_path
+    analysis_type = "vtkr"
+  elif os.path.exists(python_script_path):
+    script_path = python_script_path
+    analysis_type = "vtkpython"
+  else:
+    print "Skipping %s because corresponding script does not exist" % analysis_name
     continue
 
   # load their contents into a Python dictionary
@@ -49,9 +58,7 @@ for xml_file in xml_files:
 
   analysis_item = xmltodict.parse(xml_contents)
   analysis_item["analysis"]["script"] = script_contents
-
-  # future proofing for other types of analyses
-  analysis_item["analysis"]["type"] = "vtk_r"
+  analysis_item["analysis"]["type"] = analysis_type
 
   # use this dictionary to insert this analysis into the TreeStore
   api.newAnalysis(analysis_name, analysis_item)
