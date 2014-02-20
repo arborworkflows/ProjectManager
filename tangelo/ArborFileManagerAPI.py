@@ -472,7 +472,6 @@ class ArborFileManager:
             else:
                 characterEntry = dict()
                 for colnum,columntitle in enumerate(row):
-                    print "column: ",colnum, " title: ",columntitle
                     # add each attribute name and value as an entry in the dict
                     characterEntry[header[colnum]] = columntitle
                     # now insert the dictonary as a single entry in the collection
@@ -480,9 +479,9 @@ class ArborFileManager:
                 rownum = rownum+1
 
         # add a matrix record entry to the 'CharacterMatrix' array in the project record
-        self.db.ar_projects.update({"name": projectTitle}, { '$push': {u'CharacterMatrix': {datasetname:filename}}})
+        self.db[self.projectCollectionName].update({"name": projectTitle}, { '$push': {u'CharacterMatrix': {datasetname:filename}}})
         # make sure the character type exists in this project
-        self.db.ar_projects.update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'CharacterMatrix'}})
+        self.db[self.projectCollectionName].update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'CharacterMatrix'}})
 
     # add a character matrix to the project
     def newOccurrencesInProject(self,instancename,filename,projectTitle):
