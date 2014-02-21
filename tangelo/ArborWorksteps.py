@@ -284,10 +284,10 @@ class DatasetCopyWorkstep(Workstep):
     # this method examines the input to see if any change has occurred.  The
     # input information objects are examined.  The execute method is called if
     # needed to generate updated output because input(s) have been modified.
-    # Execute methods might require access to Arbor algorithms in R.  If so,
-    # the method will be called with the optional algorithmSubsystem parameter defined.
+    # Execute methods might require access to the API to lookup datasets.  If so,
+    # the method will be called with the Arbor API defined.
 
-    def update(self,algorithmSubsystem=None):
+    def update(self,arborapi=None):
         # if this is the last chain in the filter, then force initialization
         # by hand before the first update call
         if  not self.outputInitialized:
@@ -306,16 +306,16 @@ class DatasetCopyWorkstep(Workstep):
                 filterNeedsToBeRun = True;
         # if this filter needs to run, then run it and clear out the modified flags on the inputs
         if filterNeedsToBeRun:
-            if algorithmSubsystem == None:
+            if arborapi == None:
                 self.execute()
             else:
-                self.execute(algorithmSubsystem)
+                self.execute(arborapi)
 
     # run the filter.  This base class is a copy filter. A separate mongo connection
     # is opened and closed during the execution of the filter.  The filter's modified time
     # is updated to allow for pipeline execution behavior.
 
-    def execute(self, algorithms=None):
+    def execute(self, arborapi=None):
         print self.name+" executing"
         # setup mongo connection and look through all input collections, copying
         connection = Connection('localhost', 27017)
@@ -446,7 +446,7 @@ class DatasetFilteringWorkstep(DatasetCopyWorkstep):
    # run the filter.  The filter attribute and filter value are used to build a query for the
    # source datasets.  Only documents matching the criteria are passed through the filter
 
-    def execute(self,algorithms=None):
+    def execute(self,arborapi=None):
         print self.name+" executing"
         # setup mongo connection and look through all input collections, copying
         connection = Connection('localhost', 27017)
@@ -497,7 +497,6 @@ class DatasetFilteringWorkstep(DatasetCopyWorkstep):
 #-------------------------------------------------------------
 class GeigerFitContinuousWorkstep(DatasetCopyWorkstep):
     def __init__(self):
-        global algorithms
         DatasetCopyWorkstep.__init__(self)
         self.type = 'arbor.analysis.geigerfitcontinuous'
         self.inputType = 'data.table.spectable'
@@ -509,10 +508,7 @@ class GeigerFitContinuousWorkstep(DatasetCopyWorkstep):
         # return true if the type passed is the type of data we are expecting
         return informationObject.typeMatches(self.inputType)
 
-    def execute(self, algorithmSubsystem=None):
-        # we need to use the pre-existing, global instance of Arbor algorithms,
-        # so reference the global here.
-        global algorithms
+    def execute(self, arborapi=None):
 
         print self.name+" executing"
         # setup mongo connection and look through all input collections, copying
@@ -557,16 +553,24 @@ class GeigerFitContinuousWorkstep(DatasetCopyWorkstep):
                 print "fitContinuous: found selected character defined as: ",self.parameters['character']
                 print "fitContinuous: found outputTree defined as: ",self.parameters['outputTree']
 
-                algorithms = QtArborAlgorithmManager()
-                algorithms.setProjectManagerAPI(api)
+                algorithms = ArborAlgorithmManager()
+                algorithms.setProjectManagerAPI(arborapi)
                 algorithms.initAlgorithmLibrary()
-                
+
+                # look to see if the user defined model parameters on this workstep.  If so, use
+                # them to override the default OU model
+
+                if ('model' in self.parameters):
+                    modelToUse = self.parameters['model']
+                else:
+                    modelToUse = '"OU"'
+
                 # only attempt to run the analysis if the algorithm subsystem is defined. This relies
                 # on the global algorithms definition
-                if algorithmSubsystem != None:
+                if algorithms != None:
                     print "fitContinous: running algorithm"
-                    algorithmSubsystem.fitContinuous(self.databaseName,treeProjectName,treeDatasetName, matrixDatasetName,
-                          self.parameters['selectedCharacter'],self.parameters['outputTree'])
+                    algorithm_result = algorithms.fitContinuous(self.databaseName,treeProjectName,treeDatasetName, matrixDatasetName,
+                          self.parameters['selectedCharacter'],self.parameters['outputTree'],modelToUse)
                 else:
                     print "fitContinous:  couldn't connect with AlgorithmManager instance.. skipping"
             else:
@@ -575,9 +579,15 @@ class GeigerFitContinuousWorkstep(DatasetCopyWorkstep):
             print "fitContinuous: Exactly two inputs (a treeSpec and matrixSpec) are required"
 
 
-        # write the documents into the output collection and indicate the output time changed
-        #for result in queryResults:
-        #    outputcoll.insert(result)
+        # write  the output collection and indicate the output time changed. A tree is created and some
+        # output parameters are returned, put them in the standard key/value form of the table spec:
+
+        for result in algorithm_result:
+            record = dict()
+            record['key'] = result
+            record['value'] = algorithm_result[result]
+            outputcoll.insert(record)
+
         # rest the filter's modified time and assign it to the output object
         self.outputInformation.modifiedTime = self.modifiedTime = time.time()
         print self.name," completed fit continuous workstep "

@@ -14,10 +14,10 @@ def InvokeDataIntegrator(tree_collection_name,tree_coll,matrix_collection_name,m
     ape_tree_in_R = ConvertArborTreeIntoApe(tree_coll,tree_collection_name)
     # then convert the character matrix in a data.frame in R
     char_matrix_in_R = ConvertArborCharacterMatrixIntoDataFrame(matrix_coll,matrix_collection_name)
-    
+
     # get the shortcut for the r interpreter
     r = robjects.r
-    
+
     # DataIntegrator is defined in the geiger library
     r('library(geiger)')
 
@@ -27,7 +27,7 @@ def InvokeDataIntegrator(tree_collection_name,tree_coll,matrix_collection_name,m
         print  "commandstr:",commandstr
     r(commandstr)
 
- 
+
     commandstr = 'modelResult<-treedata(phy='+ ape_tree_in_R +', data='+char_matrix_in_R+',sort=FALSE)'
     if verbose:
         print "commandstr:",commandstr
@@ -36,21 +36,25 @@ def InvokeDataIntegrator(tree_collection_name,tree_coll,matrix_collection_name,m
     r('print(modelResult$phy)')
     r('print(modelResult$dat)')
     r('cleanedTree <- modelResult$phy')
-    
+    r('cleanedMatrix <- modelResult$dat')
+
     cleanedTree = r['cleanedTree']
-        
-    #r('str(transformedTree)')
+    cleanedMatrix = r['cleanedMatrix']
     importApeTreeToArbor(cleanedTree,out_tree_collection_name)
-    
+
+    # since we only have one output currently, return the matrix.  The tree has been written out already
+    return cleanedMatrix
+
+
 
 
 def DataIntegratorBySeparateConnection(system,database,port,
                                       tree_collection_name,matrix_collection_name,
                                       output_tree_collection_name,
                                       verbose):
-   
+
     connection = Connection(system, port)
-    db = connection[database]    
+    db = connection[database]
     tree_coll = db[str(tree_collection_name)]
     matrix_coll = db[str(matrix_collection_name)]
     out_tree_coll = db[str(output_tree_collection_name)]
@@ -59,12 +63,12 @@ def DataIntegratorBySeparateConnection(system,database,port,
     robjects.r("library('geiger')")
     r = robjects.r
     #r('source("/Users/clisle/Projects/Arbor/code/python-R-integration/arbor2apeTreeHandler.R")')
-    r('source("arbor2apeTreeHandler.R")')    
+    r('source("arbor2apeTreeHandler.R")')
     r('treeHandler = new("arbor2apeTreeHandler")')
 
-    
+
     result = InvokeDataIntegrator(tree_collection_name, tree_coll, matrix_collection_name,matrix_coll,  out_tree_coll,verbose)
     if (connection):
         connection.close()
     return result
-    
+
