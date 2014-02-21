@@ -27,21 +27,21 @@ def InvokeDataIntegrator(tree_collection_name,tree_coll,matrix_collection_name,m
         print  "commandstr:",commandstr
     r(commandstr)
 
-
     commandstr = 'modelResult<-treedata(phy='+ ape_tree_in_R +', data='+char_matrix_in_R+',sort=FALSE)'
     if verbose:
         print "commandstr:",commandstr
     r(commandstr)
 
     r('print(modelResult$phy)')
-    r('print(modelResult$dat)')
+    #r('print(modelResult$dat)')
     r('cleanedTree <- modelResult$phy')
     r('cleanedMatrix <- modelResult$dat')
-
     cleanedTree = r['cleanedTree']
     cleanedMatrix = r['cleanedMatrix']
     importApeTreeToArbor(cleanedTree,out_tree_collection_name)
 
+    r('print(typeof(cleanedMatrix))')
+    r('print(class(cleanedMatrix))')
     # since we only have one output currently, return the matrix.  The tree has been written out already
     return cleanedMatrix
 

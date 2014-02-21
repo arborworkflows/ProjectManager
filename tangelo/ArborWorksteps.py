@@ -592,3 +592,102 @@ class GeigerFitContinuousWorkstep(DatasetCopyWorkstep):
         self.outputInformation.modifiedTime = self.modifiedTime = time.time()
         print self.name," completed fit continuous workstep "
         connection.close()
+
+
+
+
+#-------------------------------------------------------------
+# data integrator workstep - this expects two inputs.  The first is the tree, the second is the matrix
+# this needs to be expanded to have named ports but we want to try this first to evaluate if the
+# approach works.
+#-------------------------------------------------------------
+class GeigerDataIntegratorWorkstep(DatasetCopyWorkstep):
+    def __init__(self):
+        DatasetCopyWorkstep.__init__(self)
+        self.type = 'arbor.analysis.geigerdataintegrator'
+        self.inputType = 'data.table.spectable'
+
+    # since this will receive spec tables as inputs describing the tree and table, check for the
+    # correct types.
+    # ACTION - replace with type checking of separate ports eventually (tree and characters, etc.)
+    def InputTypeMatches(self,informationObject):
+        # return true if the type passed is the type of data we are expecting
+        return informationObject.typeMatches(self.inputType)
+
+    def execute(self, arborapi=None):
+
+        print self.name+" executing"
+        # setup mongo connection and look through all input collections, copying
+        connection = Connection('localhost', 27017)
+        if len(self.databaseName)>0:
+            db = connection[self.databaseName]
+        else:
+            db = connection['arbor']
+        outputcoll = db[self.outputInformation.collectionName]
+        # clear out the output to prepare for running an algorithm
+        outputcoll.drop()
+
+        # check that we have both inputs needed (tree and matrix specs).  If so, then read the
+        # dataset spec records
+        # from the input collections and use the dataset references to invoke the algorithm, which
+        # requires just the references (since the algorithm opens the collections directly).
+
+        if len(self.inputs) == 2:
+            treeSpecCollection = db[self.inputs[0].collectionName]
+            matrixSpecCollection = db[self.inputs[1].collectionName]
+            treequery = dict()
+            treequery['key'] = 'project'
+            treeProjectName = treeSpecCollection.find(treequery)[0]['value']
+            treequery2 = dict()
+            treequery2['key'] = 'dataset'
+            treeDatasetName = treeSpecCollection.find(treequery2)[0]['value']
+            print "treeProject:",treeProjectName," dataset:",treeDatasetName
+            matrixQuery = dict()
+            matrixQuery['key'] = 'dataset'
+            matrixDatasetName = matrixSpecCollection.find(treequery2)[0]['value']
+            # all datasets have to be in the same project for the algorithms to look them up
+            # so all we need to read is the dataset name for the character matrix, use the
+            # rest of the information from the tree dataset
+            print "matrix Project:",treeProjectName," dataset:",matrixDatasetName
+
+            # check that the two needed parameters (character and outputTree) are defined
+            # for this workstep instance, attempt processing only if they are defined. If everything
+            # is available, run the algorithm on the selected datasets.  We use the pre-allocated version
+            # of the
+
+            if  ('outputTree' in self.parameters):
+                print "dataIntegrator: found outputTree defined as: ",self.parameters['outputTree']
+
+                algorithms = ArborAlgorithmManager()
+                algorithms.setProjectManagerAPI(arborapi)
+                algorithms.initAlgorithmLibrary()
+
+                # only attempt to run the analysis if the algorithm subsystem is defined. This relies
+                # on the global algorithms definition
+                if algorithms != None:
+                    print "dataIntegrator: running algorithm"
+                    algorithm_result = algorithms.dataIntegrator(self.databaseName,treeProjectName,treeDatasetName, matrixDatasetName,
+                          None,self.parameters['outputTree'])
+                else:
+                    print "dataIntegrator:  couldn't connect with AlgorithmManager instance.. skipping"
+            else:
+                print "dataIntegrator: Please define an outputtree parameter before running dataIntegrator"
+        else:
+            print "dataIntegrator: Exactly two inputs (a treeSpec and matrixSpec) are required"
+
+        # a character matrix that is still a data.frame is returned.  May need to use pandas to convert back to
+        # python.
+
+        print "dataIntegrator:  character matrix output is not yet generated"
+
+        for i in range(len(algorithm_result)):
+            #print i
+            record = algorithm_result[i]
+            #print record
+            #outputcoll.insert(record)
+
+        # rest the filter's modified time and assign it to the output object
+        self.outputInformation.modifiedTime = self.modifiedTime = time.time()
+        print self.name," completed fit continuous workstep "
+        connection.close()
+

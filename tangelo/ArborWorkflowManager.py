@@ -41,7 +41,8 @@ class WorkflowManager:
             'DatasetFilter',
             'DatasetCopy',
             'SpecTableSource',
-            'FitContinuous'
+            'FitContinuous',
+            'DataIntegrator'
         ]
 
     def returnListOfLoadedWorksteps(self):
@@ -100,6 +101,10 @@ class WorkflowManager:
                     newStep = ArborWorksteps.GeigerFitContinuousWorkstep()
                     foundMatch = True
                     break
+                if case('DataIntegrator') or case('arbor.analysis.geigerdataintegrator'):
+                    newStep = ArborWorksteps.GeigerDataIntegratorWorkstep()
+                    foundMatch = True
+                    break
             if foundMatch:
                 print "creating step ",workstepname
                 newStep.setName(workstepname)
@@ -136,6 +141,10 @@ class WorkflowManager:
                     break
                 if case('FitContinuous') or case('arbor.analysis.geigerfitcontinuous'):
                     newStep = ArborWorksteps.GeigerFitContinuousWorkstep()
+                    foundMatch = True
+                    break
+                if case('DataIntegrator') or case('arbor.analysis.geigerdataintegrator'):
+                    newStep = ArborWorksteps.GeigerDataIntegratorWorkstep()
                     foundMatch = True
                     break
             if foundMatch:
