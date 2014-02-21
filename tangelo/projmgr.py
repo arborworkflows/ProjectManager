@@ -12,7 +12,7 @@ def get(*pargs, **query_args):
         return tangelo.HTTPStatusCode(400, "Missing resource type")
 
     resource_type = pargs[0]
-    allowed = ["project", "analysis","collection"]
+    allowed = ["project", "analysis", "collection", "workflow"]
     if resource_type == "project":
         if len(pargs) == 1:
             return api.getListOfProjectNames()
@@ -40,7 +40,8 @@ def get(*pargs, **query_args):
             return tangelo.HTTPStatusCode(400, "Bad request - got %d parameter(s), was expecting between 1 and 5")
     elif resource_type == "analysis":
         if len(pargs) == 1:
-            return api.getListOfAnalysisNames()
+            # return api.getListOfAnalysisNames()
+            return api.returnListOfLoadedWorksteps()
         elif len(pargs) == 2:
             analysis_name = pargs[1]
             coll = api.db[api.returnCollectionForAnalysisByName(analysis_name)]
@@ -68,13 +69,15 @@ def get(*pargs, **query_args):
     # if workflow is specified as the resource type, then list the workflows in a project or display the
     # information about a particular workflow
     elif resource_type == "workflow":
-        if len(pargs) == 1:
+        if len(pargs) == 2:
             project = pargs[1]
             return api.getListOfDatasetsByProjectAndType(project,"Workflow")
-        if len(pargs) == 2:
-                project = pargs[1]
-                workflowName = pargs[2]
-                return bson.json_util.dumps(api.getStatusOfWorkflow(workflowName,project))
+        if len(pargs) == 3:
+            project = pargs[1]
+            workflowName = pargs[2]
+            return bson.json_util.dumps(api.getStatusOfWorkflow(workflowName,project))
+        else:
+            return tangelo.HTTPStatusCode(400, "Workflow resource requires 2 or 3 positional arguments")
     else:
         return tangelo.HTTPStatusCode(400, "Bad resource type '%s' - allowed types are: %s" % (resource_type, ", ".join(allowed)))
 
