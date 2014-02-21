@@ -26,10 +26,6 @@ import phyloimport_algorithm
 import root_phylotree_algorithm
 
 import add_hierarchical_name_algorithm
-import picante_phylogenetic_signal_algorithm
-import speciation_algorithm
-import fit_continuous_geiger
-import data_integrator_algorithm1
 
 class ArborAlgorithmManager:
 
@@ -100,6 +96,7 @@ class ArborAlgorithmManager:
         self.projectapi.newTreeInProjectFromExistingCollection(str(outname),proj,description)
 
     def dataIntegrator(self,dbname,proj,tree,matrix,chars,outname):
+        import data_integrator_algorithm1
         #matrixInstances = self.api.getListOfDatasetsByProjectAndType(projectname,'CharacterMatrix')
         #treeInstances = self.api.getListOfDatasetsByProjectAndType(projectname,'PhyloTree')
         tree_collection = self.projectapi.returnCollectionForObjectByName(proj,'PhyloTree',tree)
@@ -115,6 +112,7 @@ class ArborAlgorithmManager:
         add_hierarchical_name_algorithm.AssignHierarchicalNamesSeparateConnection('localhost',dbname,27017,tree_collection,verbose=False)
 
     def fitContinuous(self,dbname,proj,tree,matrix,chars,outname,algo_model_parameter='"OU"'):
+        import fit_continuous_geiger
         #matrixInstances = self.api.getListOfDatasetsByProjectAndType(projectname,'CharacterMatrix')
         #treeInstances = self.api.getListOfDatasetsByProjectAndType(projectname,'PhyloTree')
         tree_collection = self.projectapi.returnCollectionForObjectByName(proj,'PhyloTree',tree)
@@ -126,6 +124,7 @@ class ArborAlgorithmManager:
         return results
 
     def phylogeneticSignal(self,dbname,proj,tree,matrix,character,outname):
+        import picante_phylogenetic_signal_algorithm
         #matrixInstances = self.api.getListOfDatasetsByProjectAndType(projectname,'CharacterMatrix')
         #treeInstances = self.api.getListOfDatasetsByProjectAndType(projectname,'PhyloTree')
         tree_collection = self.projectapi.returnCollectionForObjectByName(proj,'PhyloTree',tree)
@@ -135,6 +134,7 @@ class ArborAlgorithmManager:
         return results
 
     def speciation(self,dbname,proj,tree,matrix,character,outname):
+        import speciation_algorithm
         #matrixInstances = self.api.getListOfDatasetsByProjectAndType(projectname,'CharacterMatrix')
         #treeInstances = self.api.getListOfDatasetsByProjectAndType(projectname,'PhyloTree')
         tree_collection = self.projectapi.returnCollectionForObjectByName(proj,'PhyloTree',tree)
