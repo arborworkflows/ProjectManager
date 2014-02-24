@@ -11,13 +11,18 @@ import bson.json_util
 
 
 class WorkflowManager:
-    def __init__(self):
+    def __init__(self,arborapi=None):
         global algorithms
         self.worksteps = dict()
         self.workflowName = 'default'
         self.databaseName = 'arbor'
         self.projectName = 'workflows'
         self.arbor_workstep_dictionary = dict()
+        # to invoke the algorithms that directly access collections, the worksteps need to know about
+        # the API for collection lookups, etc. So give option to pass the API when needed. This is needed
+        # only during the actual execution of a workflow.
+        if arborapi != None:
+            self.api = arborapi
 
         # keep a list of all steps where output is used by another step, these are internal
         # nodes and will be executed implicitly
@@ -36,7 +41,8 @@ class WorkflowManager:
             'DatasetFilter',
             'DatasetCopy',
             'SpecTableSource',
-            'FitContinuous'
+            'FitContinuous',
+            'DataIntegrator'
         ]
 
     def returnListOfLoadedWorksteps(self):
@@ -95,6 +101,10 @@ class WorkflowManager:
                     newStep = ArborWorksteps.GeigerFitContinuousWorkstep()
                     foundMatch = True
                     break
+                if case('DataIntegrator') or case('arbor.analysis.geigerdataintegrator'):
+                    newStep = ArborWorksteps.GeigerDataIntegratorWorkstep()
+                    foundMatch = True
+                    break
             if foundMatch:
                 print "creating step ",workstepname
                 newStep.setName(workstepname)
@@ -131,6 +141,10 @@ class WorkflowManager:
                     break
                 if case('FitContinuous') or case('arbor.analysis.geigerfitcontinuous'):
                     newStep = ArborWorksteps.GeigerFitContinuousWorkstep()
+                    foundMatch = True
+                    break
+                if case('DataIntegrator') or case('arbor.analysis.geigerdataintegrator'):
+                    newStep = ArborWorksteps.GeigerDataIntegratorWorkstep()
                     foundMatch = True
                     break
             if foundMatch:
@@ -188,8 +202,8 @@ class WorkflowManager:
                 # some worksteps might use Arbor algorithms, so we need to pass a reference
                 # to the instantiated algorithms to the worksteps so algorithms can be executed
 
-                if algorithms != None:
-                    self.worksteps[step].update(algorithms)
+                if self.api != None:
+                    self.worksteps[step].update(self.api)
                 else:
                     self.worksteps[step].update()
 

@@ -14,10 +14,11 @@ def InvokeFitContinuous(tree_collection_name,tree_coll,matrix_collection_name,ma
     ape_tree_in_R = ConvertArborTreeIntoApe(tree_coll,tree_collection_name)
     # then convert the character matrix in a data.frame in R
     char_matrix_in_R = ConvertArborCharacterMatrixIntoDataFrame(matrix_coll,matrix_collection_name)
-    
+
     # get the shortcut for the r interpreter
     r = robjects.r
-    
+
+
     # fitContinuous is defined in the geiger library
     r('library(geiger)')
 
@@ -31,18 +32,18 @@ def InvokeFitContinuous(tree_collection_name,tree_coll,matrix_collection_name,ma
     if verbose:
         print "commandstr:",commandstr
     r(commandstr)
-    
+
     if verbose:
         print "character table to test for phylosignal:"
         r('str(selectedchar)')
-    
+
     #r('svl_named <- as.numeric(svl$SVL)')
     commandstr = 'selectedchar_named <- as.numeric(selectedchar$'+character+')'
     if verbose:
         print commandstr
     r(commandstr)
     r('names(selectedchar_named) <- rownames(selectedchar)')
-   
+
     commandstr = 'modelResult<-fitContinuous(selectedchar_named,phy='+ ape_tree_in_R +', model='+model_parameter+')'
     if verbose:
         print "commandstr:",commandstr
@@ -52,7 +53,11 @@ def InvokeFitContinuous(tree_collection_name,tree_coll,matrix_collection_name,ma
     r('print(modelResult$opt$aic)')
     r('print(modelResult$opt$aicc)')
 
-    # now change the tree branch lengths to reflect the model fitting       
+    r('result_alpha <- modelResult$opt$alpha')
+    r('result_aic <- modelResult$opt$aic')
+    r('result_aicc <- modelResult$opt$aicc')
+
+    # now change the tree branch lengths to reflect the model fitting
     print "creating output tree"
     commandstr = 'transformedTree<-transform('+ape_tree_in_R+', '+model_parameter+ ', modelResult$opt$alpha)'
     if verbose:
@@ -60,17 +65,25 @@ def InvokeFitContinuous(tree_collection_name,tree_coll,matrix_collection_name,ma
     r(commandstr)
         # now store the tree in APE format as a new dataset in Arbor
     transformedTree = r['transformedTree']
-    #r('save(transformedTree,file="transformedTree")')  
-        
+    #r('save(transformedTree,file="transformedTree")')
+
     #r('str(transformedTree)')
     importApeTreeToArbor(transformedTree,out_collection_name)
-    
+
+    # build and return the results table
+    results = dict()
+    results['alpha'] = r['result_alpha'][0]
+    results['aic'] = r['result_aic'][0]
+    results['aicc'] = r['result_aicc'][0]
+    #results['treeCollection'] = out_collection_name
+    print "results = ", results
+    return results
 
 
 def FitContinuousBySeparateConnection(system,database,port,tree_collection_name,matrix_collection_name,character, parameters,output_tree_collection_name,verbose):
-   
+
     connection = Connection(system, port)
-    db = connection[database]    
+    db = connection[database]
     tree_coll = db[str(tree_collection_name)]
     matrix_coll = db[str(matrix_collection_name)]
     out_tree_coll = db[str(output_tree_collection_name)]
@@ -78,11 +91,15 @@ def FitContinuousBySeparateConnection(system,database,port,tree_collection_name,
     # startup up an R interpreter to do the processing.  We will be converting a tree, so create a tree handler
     robjects.r("library('geiger')")
     r = robjects.r
+
+    r('print("working directory is")')
+    r('print(getwd())')
+
     r('source("arbor2apeTreeHandler.R")')
     r('treeHandler = new("arbor2apeTreeHandler")')
-    
-    result = InvokeFitContinuous(tree_collection_name, tree_coll, matrix_collection_name,matrix_coll, character, parameters, out_tree_coll,verbose)
+
+    results = InvokeFitContinuous(tree_collection_name, tree_coll, matrix_collection_name,matrix_coll, character, parameters, out_tree_coll,verbose)
     if (connection):
         connection.close()
-    return result
-    
+    return results
+
