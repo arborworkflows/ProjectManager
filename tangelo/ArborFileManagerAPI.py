@@ -489,7 +489,7 @@ class ArborFileManager:
 
     # add a character matrix to the project
     def newCharacterMatrixInProjectFromString(self, datasetname, data, projectTitle, filename):
-        collectionName = self.prefixString+projectTitle+self.separatorString+"CharacterMatrix"+self.separatorString+datasetname
+        collectionName = self.returnCollectionForObjectByName(projectTitle,'CharacterMatrix',datasetname)
         newCollection = self.db[collectionName]
         print "uploading characters to collection: ",collectionName
 
