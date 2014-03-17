@@ -40,8 +40,8 @@ def get(*pargs, **query_args):
             return tangelo.HTTPStatusCode(400, "Bad request - got %d parameter(s), was expecting between 1 and 5")
     elif resource_type == "analysis":
         if len(pargs) == 1:
-            # return api.getListOfAnalysisNames()
-            return api.returnListOfLoadedWorksteps()
+            return api.getListOfAnalysisNames()
+            #return api.returnListOfLoadedWorksteps()
         elif len(pargs) == 2:
             analysis_name = pargs[1]
             coll = api.db[api.returnCollectionForAnalysisByName(analysis_name)]

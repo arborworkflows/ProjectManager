@@ -43,6 +43,11 @@ def recursive_clade(obj, data_coll, tree_coll = None):
             # do we need to even do this first? SZ -Aug 16, 2012
             if isinstance(attr, BaseTree.Clade):
                 clade_children.append(attr)
+            elif isinstance(attr, Phylo.PhyloXML.BranchColor):
+                color = {"red" : attr.red, "green" : attr.green,
+                         "blue": attr.blue}
+                tempDict[key] = color
+                print "found a color attribute! %s" % str(color)
             elif isinstance(attr, list):
                 tempDictList = []
                 # iterate through each element of the list

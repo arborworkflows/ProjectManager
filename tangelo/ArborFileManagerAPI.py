@@ -284,7 +284,7 @@ class ArborFileManager:
           if (stringFormat == "Newick" or stringFormat == "newick"):
              outputString = phyloexport_algorithm.convertTreeToNewickString(treeCollection)
           elif (stringFormat == "PhyloXML" or stringFormat =="phyloxml"):
-             print "to be implemented"
+             outputString = phyloexport_algorithm.convertTreeToPhyloXMLString(treeCollection)
           else:
              print "unrecognized format ", stringFormat
         elif (datatypeName == "CharacterMatrix"):
