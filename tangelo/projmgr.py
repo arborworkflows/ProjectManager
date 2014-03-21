@@ -12,7 +12,7 @@ def get(*pargs, **query_args):
         return tangelo.HTTPStatusCode(400, "Missing resource type")
 
     resource_type = pargs[0]
-    allowed = ["project", "analysis","collection","workflow"]
+    allowed = ["project", "analysis","collection", "workflow"]
     if resource_type == "project":
         if len(pargs) == 1:
             return api.getListOfProjectNames()
