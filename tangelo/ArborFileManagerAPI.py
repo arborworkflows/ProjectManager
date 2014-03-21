@@ -272,29 +272,29 @@ class ArborFileManager:
         collection_name = "%sanalyses_%s" % (self.prefixString, analysis_name)
         return collection_name
 
-    # Convert dataset to a text string
+    # Convert dataset to a text string this is used to serve out trees, matrices, workflows, etc.
     def getDatasetAsTextString(self,projectName,datatypeName, datasetName,stringFormat):
         import phyloexport_algorithm
-
         outputString = None
         collectionName = self.returnCollectionForObjectByName(projectName,datatypeName, datasetName)
         datasetCollection = self.db[collectionName]
         if (datatypeName == "PhyloTree"):
-          treeCollection = datasetCollection
-          if (stringFormat == "Newick" or stringFormat == "newick"):
-             outputString = phyloexport_algorithm.convertTreeToNewickString(treeCollection)
-          elif (stringFormat == "PhyloXML" or stringFormat =="phyloxml"):
-             print "to be implemented"
-          else:
-             print "unrecognized format ", stringFormat
+            treeCollection = datasetCollection
+            if (stringFormat == "Newick" or stringFormat == "newick"):
+                outputString = phyloexport_algorithm.convertTreeToNewickString(treeCollection)
+            elif (stringFormat == "PhyloXML" or stringFormat =="phyloxml"):
+                print "to be implemented"
+            else:
+                print "unrecognized format ", stringFormat
         elif (datatypeName == "CharacterMatrix"):
-          if (stringFormat == "CSV" or stringFormat == "csv"):
-             outputString = phyloexport_algorithm.convertTableToCSVString(datasetCollection)
-          elif (stringFormat == "header" or stringFormat == "headers"):
-              outputString = phyloexport_algorithm.getHeadersForTable(datasetCollection)
-          else:
-             print "unrecognized format ", stringFormat
-
+            if (stringFormat == "CSV" or stringFormat == "csv"):
+                outputString = phyloexport_algorithm.convertTableToCSVString(datasetCollection)
+            elif (stringFormat == "header" or stringFormat == "headers"):
+                outputString = phyloexport_algorithm.getHeadersForTable(datasetCollection)
+        elif (datatypeName == "Workflow"):
+            outputString = self.returnWorkflowRecord(datasetName,projectName)
+        else:
+            print "unrecognized format ", stringFormat
         return outputString
 
      # find and remove a dataset instance
@@ -595,8 +595,6 @@ class ArborFileManager:
         # make sure the Table type exists in this project
         self.db[self.projectCollectionName].update({"name": projectTitle}, { '$addToSet': {u'datatypes': u'Table'}})
 
-
-
     # add sequences to the project
     def newSequencesInProject(self,instancename,filename,projectTitle):
         collectionName = self.prefixString+projectTitle+self.separatorString+"Sequences"+self.separatorString+instancename
@@ -667,27 +665,10 @@ class ArborFileManager:
                         typelist.pop(i)
                         self.db[self.projectCollectionName].save(project)
 
-
     def returnWorkflowRecord(self,workflowName,projectTitle):
         collectionName = self.getWorkflowCollectionName(projectTitle)
         print "collection to check:",collectionName
         return (self.db[collectionName].find({'name':workflowName}))[0]
-
-#     # deprecated - remove soon?
-#     def returnWorkflowRecordDeprecated(self,workflowName,projectTitle):
-#         # return a list of only the project names by using the $project operator in mongo.
-#         # pick the 'result' field from the query
-#         project = self.db[self.projectCollectionName].find_one({"name" : projectTitle})
-#         print "found project record: ", project
-#         # some projects may not have dataypes yet, true during initial development at least
-#         if u'datatypes' in project:
-#             projecttypes = project[u'datatypes']
-#             print "projecttypes=",projecttypes
-#             if u'Workflow' in projecttypes:
-#                 print "workflows in this project:",project[u'Workflow']
-#                 if workflowName in project[u'Workflow']:
-#                     print "found record of this workflow:",workflowName,"in project ",projectTitle
-#                     workflowlist = self.db[self.getWorkflowCollectionName(projectTitle)].find({'name':workflowName})
 
         # nothing was found, so return empty
         return None
@@ -716,7 +697,6 @@ class ArborFileManager:
             self.db[self.getWorkflowCollectionName(projectTitle)].update({'name':wflowName},wfrecord)
         else:
             print "attempt to add step to non-existant workflow"
-
 
     # add a new parameter to a workstep description.  We accomplish this by instantiating a workflow manager and having it
     # add the step, then update the datbase again.  The format of workflows is encapsulated in the WorkflowManager.
@@ -753,6 +733,7 @@ class ArborFileManager:
 
     # connect the output of one analysis to the input of another analysis.  The initial ones didn't have
     # multiple outputs, so this interface needs to be extended.
+
     def connectStepsInWorkflow(self,wflowName,outStepName,inStepName,projectTitle):
         wfrecord = self.returnWorkflowRecord(wflowName,projectTitle)
         if (wfrecord != None) :
@@ -794,6 +775,13 @@ class ArborFileManager:
         wfm =  ArborWorkflowManager.WorkflowManager()
         return wfm.returnListOfLoadedWorksteps()
 
+    def updateExistingWorkflowInProject(self,wflowName,serializedRecord,projectTitle):
+        print "updating workflow:",wflowName, " with record: ",serializedRecord
+        wfm =  ArborWorkflowManager.WorkflowManager()
+        wfRecordAsDict = bson.json_util.loads(serializedRecord)
+        self.db[self.getWorkflowCollectionName(projectTitle)].update({'name':wflowName},wfRecordAsDict)
+        return wfm.returnListOfLoadedWorksteps()
+
 
 #----------- workflows end ------------------------
 
@@ -825,11 +813,15 @@ class ArborFileManager:
     # returns a list of analysis names
     def getListOfAnalysisNames(self):
         analysis_names = []
+        #search_string = r"%sanalyses_(.*?)$" % self.prefixString
         regexp = re.compile(r"%sanalyses_(.*?)$" % self.prefixString)
+        #regexp = re.compile(search_string)
         for collection_name in self.db.collection_names():
             match = regexp.search(collection_name)
             if match:
+                print "found analysis: ",match.group(1)
                 analysis_names.append(match.group(1))
         return analysis_names
+
 
 

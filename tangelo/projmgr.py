@@ -12,7 +12,7 @@ def get(*pargs, **query_args):
         return tangelo.HTTPStatusCode(400, "Missing resource type")
 
     resource_type = pargs[0]
-    allowed = ["project", "analysis","collection"]
+    allowed = ["project", "analysis","collection","workflow"]
     if resource_type == "project":
         if len(pargs) == 1:
             return api.getListOfProjectNames()
@@ -68,12 +68,15 @@ def get(*pargs, **query_args):
     # if workflow is specified as the resource type, then list the workflows in a project or display the
     # information about a particular workflow
     elif resource_type == "workflow":
-        if len(pargs) == 1:
+        if len(pargs) == 2:
+            print("REST: got workflow, one argument")
             project = pargs[1]
             return api.getListOfDatasetsByProjectAndType(project,"Workflow")
-        if len(pargs) == 2:
+        if len(pargs) == 3:
+                print("REST: got workflow, two argument")
                 project = pargs[1]
                 workflowName = pargs[2]
+                print("REST: getting status of workflow:",workflowName)
                 return bson.json_util.dumps(api.getStatusOfWorkflow(workflowName,project))
     else:
         return tangelo.HTTPStatusCode(400, "Bad resource type '%s' - allowed types are: %s" % (resource_type, ", ".join(allowed)))
@@ -125,7 +128,6 @@ def put(resource, projname, datasetname=None, data=None, filename=None, filetype
 
             # allow user to add a parameter to a workstep or update the value of the parameter. There
             # is currently a limitation that all values are strings, e.g. "2.4" instead of 2.4.
-
             if operation == "updateWorkstepParameter":
                 # if a float argument is sent, use this as the value for the parameter, instead of the
                 # string.  A conversion is done to float to assure numberic values
@@ -138,7 +140,9 @@ def put(resource, projname, datasetname=None, data=None, filename=None, filetype
                 api.connectStepsInWorkflow(workflowName,outputStepName,inputStepName,projname)
             if operation == "executeWorkflow":
                 api.executeWorkflowInProject(workflowName,projname)
-
+            if operation == "updateWorkflowFromString":
+                print "received request to update workflow: ",workflowName
+                api.updateExistingWorkflowInProject(workflowName,data,projname)
     return "OK"
 
 @tangelo.restful

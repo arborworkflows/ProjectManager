@@ -70,6 +70,7 @@ class WorkflowManager:
             return False
         return True
 
+
 #     # initialize the correct type of worktep, depending on the user's input
     def addWorkstepToWorkflow(self,worksteptype, workstepname):
         print "preparing to add step type of",worksteptype," named ",workstepname
