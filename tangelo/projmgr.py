@@ -69,15 +69,15 @@ def get(*pargs, **query_args):
     # information about a particular workflow
     elif resource_type == "workflow":
         if len(pargs) == 2:
-            print("REST: got workflow, one argument")
             project = pargs[1]
             return api.getListOfDatasetsByProjectAndType(project,"Workflow")
         if len(pargs) == 3:
-                print("REST: got workflow, two argument")
-                project = pargs[1]
-                workflowName = pargs[2]
-                print("REST: getting status of workflow:",workflowName)
-                return bson.json_util.dumps(api.getStatusOfWorkflow(workflowName,project))
+            project = pargs[1]
+            workflowName = pargs[2]
+            print("REST: getting status of workflow:",workflowName)
+            return bson.json_util.dumps(api.getStatusOfWorkflow(workflowName,project))
+        else:
+            return tangelo.HTTPStatusCode(400, "Workflow resource requires 2 or 3 positional arguments")
     else:
         return tangelo.HTTPStatusCode(400, "Bad resource type '%s' - allowed types are: %s" % (resource_type, ", ".join(allowed)))
 
